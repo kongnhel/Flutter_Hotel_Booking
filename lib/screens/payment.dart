@@ -4,12 +4,8 @@ class PaymentScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Payment'),
-      ),
-      body: Center(
-        child: Text('Payment Screen'),
-      ),
+      appBar: AppBar(title: Text('Payment'), foregroundColor: Color(4)),
+      body: Center(child: Text('Payment Screen')),
     );
   }
 }

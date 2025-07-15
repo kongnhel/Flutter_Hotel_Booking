@@ -1,7 +1,7 @@
 var profile = {
   "name": "Sangvaleap",
   "image": "https://avatars.githubusercontent.com/u/86506519?v=4",
-  "email": "sangvaleap.vanny@gmail.com"
+  "email": "sangvaleap.vanny@gmail.com",
 };
 
 List categories = [
