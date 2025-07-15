@@ -1,0 +1,164 @@
+import 'package:flutter/material.dart';
+import 'package:hotel_booking/utils/data.dart'; // Import your data list
+import 'package:hotel_booking/screens/order_page.dart'; // Import OrderPage for navigation
+
+class SearchResultsPage extends StatelessWidget {
+  final Map<String, dynamic> searchParameters;
+
+  const SearchResultsPage({super.key, required this.searchParameters});
+
+  @override
+  Widget build(BuildContext context) {
+    // Filter the 'features' data based on the search parameters
+    // This is a simplified example; real filtering might be more complex
+    List filteredRooms = features.where((room) {
+      bool matchesCategory = true;
+      if (searchParameters['category'] != 'All Categories' && searchParameters['category'] != 'Any Category') {
+        matchesCategory = room['type'] == searchParameters['category'];
+      }
+
+      // You can add more complex filtering logic here for location, dates, etc.
+      // For now, we'll primarily filter by category.
+      // bool matchesLocation = room['location'].contains(searchParameters['location'], ignoreCase: true);
+
+      return matchesCategory; // && matchesLocation;
+    }).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Search Results',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.blueGrey[800],
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop(); // Go back to the SearchPage
+          },
+        ),
+      ),
+      body: filteredRooms.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.sentiment_dissatisfied, size: 60, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No rooms found for "${searchParameters['category']}"',
+                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Try a different category or criteria.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16.0),
+              itemCount: filteredRooms.length,
+              itemBuilder: (context, index) {
+                final room = filteredRooms[index];
+                return GestureDetector(
+                  onTap: () {
+                    // Navigate to OrderPage (Room Details)
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OrderViewPage(roomData: room),
+                      ),
+                    );
+                  },
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: Image.network(
+                              room['image'] ?? 'https://placehold.co/100x100/CCCCCC/000000?text=No+Image',
+                              width: 100,
+                              height: 100,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: Colors.grey[300],
+                                  child: const Center(
+                                    child: Icon(Icons.broken_image, size: 40, color: Colors.black54),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  room['name'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Type: ${room['type'] ?? 'N/A'}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Location: ${room['location'] ?? 'N/A'}',
+                                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  room['price'] ?? 'N/A',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Optional: Add a favorite button here if desired
+                          Align(
+                            alignment: Alignment.topRight,
+                            child: IconButton(
+                              icon: Icon(
+                                room['is_favorited'] == true ? Icons.favorite : Icons.favorite_border,
+                                color: room['is_favorited'] == true ? Colors.red : Colors.grey,
+                              ),
+                              onPressed: () {
+                                // Handle favorite toggle (requires state management)
+                                print('Favorite toggled for ${room['name']}');
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
