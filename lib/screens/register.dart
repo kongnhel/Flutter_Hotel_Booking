@@ -1,5 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:hotel_booking/models/user_model.dart';
+import 'package:hotel_booking/screens/login.dart';
+import 'package:hotel_booking/screens/root_app.dart';
 import 'package:hotel_booking/theme/color.dart';
+import 'package:http/http.dart' as http;
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -37,48 +43,54 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
 
-      // --- Here you will integrate with Firebase Authentication ---
-      // Example:
-      // try {
-      //   await FirebaseAuth.instance.createUserWithEmailAndPassword(
-      //     email: _emailController.text.trim(),
-      //     password: _passwordController.text,
-      //   );
-      //   // If registration is successful, you might want to:
-      //   // 1. Store additional user data in Firestore (first name, last name)
-      //   //    e.g., FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({...});
-      //   // 2. Navigate to the home page or a success screen
-      //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => RootApp())); // Or your main app screen
-      // } on FirebaseAuthException catch (e) {
-      //   String message = 'An error occurred. Please try again.';
-      //   if (e.code == 'weak-password') {
-      //     message = 'The password provided is too weak.';
-      //   } else if (e.code == 'email-already-in-use') {
-      //     message = 'An account already exists for that email.';
-      //   }
-      //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-      // } catch (e) {
-      //   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('An unexpected error occurred.')));
-      // } finally {
-      //   setState(() {
-      //     _isLoading = false;
-      //   });
-      // }
-      // --- End of Firebase Integration example ---
+      final url = Uri.parse("http://localhost:3000/api/users/register");
 
-      // For demonstration, simulate a delay
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Registration attempt for ${_emailController.text}'),
-        ),
+      // Create a UserModel instance with the data
+      UserModel newUser = UserModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Client-side ID
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        role: "user", // Default role
+        canEdit: false, // Default permission
+        canDelete: false, // Default permission
+        // NOTE: Your UserModel currently doesn't have firstName/lastName.
+        // If your backend expects them, you'd need to add them to UserModel
+        // and pass them here.
       );
-      Navigator.pop(
-        context,
-      ); // Go back to login page after successful "registration"
+
+      try {
+        final response = await http.post(
+          url,
+          headers: {"Content-Type": "application/json"},
+          body: json.encode(newUser.toJson()), // <-- Use toJson() here
+        );
+
+        final resBody = json.decode(response.body);
+
+        if (response.statusCode == 201) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Registered: ${resBody['message']}")),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const LoginPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed: ${resBody['error'] ?? response.body}"),
+            ),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -245,13 +257,48 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.pop(context); // Go back to login page
+                        // Navigate to the login page and remove all previous routes
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LoginPage(),
+                          ),
+                          (Route<dynamic> route) => false,
+                        );
                       },
+
                       child: Text(
-                        "Login",
+                        "Login /",
                         style: TextStyle(
                           color:
                               AppColor.primary, // Your primary color for links
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    TextButton(
+                      onPressed: () {
+                        // Navigate to the login page and remove all previous routes
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RootApp(),
+                          ),
+                          (Route<dynamic> route) => false,
+                        );
+                      },
+
+                      child: Text(
+                        "Continue to page",
+                        style: TextStyle(
+                          color: const Color.fromARGB(
+                            255,
+                            44,
+                            220,
+                            41,
+                          ), // Your primary color for links
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),

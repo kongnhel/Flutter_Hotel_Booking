@@ -10,7 +10,7 @@ class IconBox extends StatelessWidget {
     this.borderColor = Colors.transparent,
     this.radius = 50,
     this.padding = 3,
-    this.isShadow = true,
+    this.isShadow = true, required Null Function() onPressed, required String tooltip,
   }) : super(key: key);
 
   final Widget child;
