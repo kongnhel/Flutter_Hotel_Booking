@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Hotel Booking',
+      title: 'Hotel Booking kong is cooking',
       theme: ThemeData(primaryColor: AppColor.primary),
 
       home: userEmail != null ? const RootApp() : const LoginPage(),
