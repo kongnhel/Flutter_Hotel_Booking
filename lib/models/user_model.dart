@@ -1,7 +1,6 @@
 class UserModel {
   final String id;
   final String email;
-  final String password;
   final String role;
   final bool canEdit;
   final bool canDelete;
@@ -9,7 +8,6 @@ class UserModel {
   UserModel({
     required this.id,
     required this.email,
-    required this.password,
     required this.role,
     required this.canEdit,
     required this.canDelete,
@@ -17,10 +15,10 @@ class UserModel {
 
   // Factory method to create a UserModel from JSON (from API or Firestore)
   factory UserModel.fromJson(Map<String, dynamic> json) {
+    print('Parsing user role: ${json['role']}'); // Debug here
     return UserModel(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
-      password: json['password'] ?? '',
       role: json['role'] ?? '',
       canEdit: json['canEdit'] ?? false,
       canDelete: json['canDelete'] ?? false,
@@ -32,7 +30,6 @@ class UserModel {
     return {
       'id': id,
       'email': email,
-      'password': password,
       'role': role,
       'canEdit': canEdit,
       'canDelete': canDelete,

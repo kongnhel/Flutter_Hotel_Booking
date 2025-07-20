@@ -100,15 +100,39 @@ class _SearchPageState extends State<SearchPage> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Welcome to your next\nAdventure!',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          icon: Icon(Icons.arrow_back),
+                          label: Text("Back"),
+                          onPressed: () {
+                            Navigator.pop(context);
+                          },
+                        ),
+                        const SizedBox(
+                          width: 12,
+                        ), // spacing between button and text
+                        Expanded(
+                          // so long text doesn't overflow
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Welcome to your next\nAdventure!',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 8),
+
                     const Text(
                       'Discover the Perfect Stay with WanderStay',
                       style: TextStyle(fontSize: 14, color: Colors.orange),

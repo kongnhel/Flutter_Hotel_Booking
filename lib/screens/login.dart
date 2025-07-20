@@ -1,22 +1,16 @@
 import 'dart:convert'; // For JSON encoding/decoding
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart'; // Core Flutter widgets
-import 'package:hotel_booking/screens/home.dart'; // Assuming this is your main app home page
-import 'package:hotel_booking/screens/root_app.dart';
-import 'package:hotel_booking/theme/color.dart';
+import 'package:hotel_booking/models/user_model.dart'; // User model definition
+import 'package:hotel_booking/screens/root_app.dart'; // The main admin dashboard
+import 'package:hotel_booking/theme/color.dart'; // Your app's custom color theme
 import 'package:http/http.dart' as http; // For making HTTP requests
 
 import 'package:hotel_booking/screens/register.dart'; // For navigating to the registration page
-// import 'package:hotel_booking/screens/root_app.dart'; // This import seems unused, removed for clarity
-// import 'package:hotel_booking/theme/color.dart'; // This import is for your custom colors
 import 'package:shared_preferences/shared_preferences.dart'; // For local data storage (e.g., user session)
 
-// --- Placeholder for AppColor class ---
-// You should replace this with your actual AppColor class from 'package:hotel_booking/theme/color.dart'
-// This is included here to make the provided code runnable.
-
-// --- End of AppColor Placeholder ---
-
 /// A stateful widget for the user login page.
+/// This page allows users to enter their credentials and log in.
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -43,73 +37,100 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  /// Handles the user login process.
-  ///
-  /// It sends the email and password to the backend API,
-  /// saves the user's email on successful login, and navigates
-  /// to the home page or shows an error message.
   Future<void> _loginUser() async {
-    // Validate form fields before proceeding with the login request.
-    if (!_formKey.currentState!.validate()) {
-      return; // If validation fails, stop the login process.
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() {
-      _isLoading = true; // Show loading indicator
+      _isLoading = true;
     });
 
     try {
-      final url = Uri.parse(
-        "http://localhost:3000/api/users/login",
-      ); // Your backend API endpoint
+      // Login with Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
+      final user = userCredential.user;
+      if (user == null) throw Exception("User not found");
+
+      // Get Firebase ID token
+      String? idToken = await user.getIdToken();
+
+      // Call your backend API to fetch user profile
       final response = await http.post(
-        url,
+        Uri.parse("http://localhost:3000/api/users/login"),
         headers: {"Content-Type": "application/json"},
-        body: json.encode({
-          "email": _emailController.text.trim(), // Trim whitespace from email
-          "password": _passwordController.text
-              .trim(), // Trim whitespace from password
-        }),
+        body: json.encode({"idToken": idToken}),
       );
 
-      final responseBody = json.decode(
-        response.body,
-      ); // Decode the JSON response
       if (response.statusCode == 200) {
-        // Login successful
-        final prefs = await SharedPreferences.getInstance();
-        // Save the user's email for session management (consistent with OrderViewPage)
-        await prefs.setString('email', responseBody['email']);
+        final responseBody = json.decode(response.body);
+        final userModel = UserModel.fromJson(responseBody);
 
-        // Navigate to the home page and replace the current route (prevent going back to login)
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => RootApp(initialEmail: responseBody['email']),
-          ),
-        );
-      } else {
-        // Login failed, show error message from the backend or a generic one
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              responseBody['error'] ?? "Login failed. Please try again.",
+        final prefs = await SharedPreferences.getInstance();
+
+        // Save user model JSON and user email separately for session persistence
+        await prefs.setString('user', json.encode(userModel.toJson()));
+        await prefs.setString('email', user.email ?? '');
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Login successful! Welcome back, ${user.email}'),
+              backgroundColor: Colors.green,
             ),
-            backgroundColor: Colors.red, // Indicate error
+          );
+        }
+
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RootApp()),
+          );
+        }
+      } else {
+        final responseBody = json.decode(response.body);
+        final errorMessage = responseBody['error'] ?? 'Login failed';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login failed. Please check your credentials.';
+      if (e.code == 'user-not-found') message = 'No user found for that email.';
+      if (e.code == 'wrong-password') message = 'Wrong password provided.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), backgroundColor: Colors.red),
+        );
+      }
+    } on http.ClientException catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Network error: Could not connect to the server. Please check your internet connection.",
+            ),
+            backgroundColor: Colors.red,
           ),
         );
       }
     } catch (e) {
-      // Handle network errors or other exceptions
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Your Email or Password is incorrect!!"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Unexpected error: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() {
-        _isLoading = false; // Hide loading indicator
+        _isLoading = false;
       });
     }
   }
@@ -222,8 +243,8 @@ class _LoginPageState extends State<LoginPage> {
                 // Login Button
                 ElevatedButton(
                   onPressed: _isLoading
-                      ? null
-                      : _loginUser, // Disable button while loading
+                      ? null // Disable button while loading
+                      : _loginUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
                         AppColor.primary, // Button background color
@@ -283,6 +304,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+                    // Removed the "Continue to Page" button as it bypasses login and is redundant
+                    // with the main app's login check.
                   ],
                 ),
               ],

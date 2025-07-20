@@ -251,10 +251,27 @@ class OrderViewPage extends StatelessWidget {
                 Navigator.of(dialogContext).pop(); // Close dialog first.
 
                 if (email == null) {
-                  // If not logged in, navigate to the LoginPage.
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                  // Show alert message first
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Login Required'),
+                      content: const Text('Please login to continue.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(); // Close the dialog
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginPage(),
+                              ),
+                            );
+                          },
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
                   );
                 } else {
                   // If logged in, navigate to the CheckoutPage, passing room data.

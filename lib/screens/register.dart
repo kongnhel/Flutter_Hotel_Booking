@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/user_model.dart';
 import 'package:hotel_booking/screens/login.dart';
@@ -43,33 +44,48 @@ class _RegisterPageState extends State<RegisterPage> {
         _isLoading = true;
       });
 
-      final url = Uri.parse("http://localhost:3000/api/users/register");
-
-      // Create a UserModel instance with the data
-      UserModel newUser = UserModel(
-        id: DateTime.now().millisecondsSinceEpoch.toString(), // Client-side ID
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        role: "user", // Default role
-        canEdit: false, // Default permission
-        canDelete: false, // Default permission
-        // NOTE: Your UserModel currently doesn't have firstName/lastName.
-        // If your backend expects them, you'd need to add them to UserModel
-        // and pass them here.
-      );
-
       try {
+        // Create user with Firebase Auth
+        UserCredential userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            );
+
+        final user = userCredential.user;
+        if (user == null) throw Exception("User creation failed");
+
+        // Get Firebase ID Token for backend API verification
+        String? idToken = await user.getIdToken();
+
+        // Prepare user profile data
+        final profileData = {
+          'id': user.uid,
+          'email': user.email,
+          'role': 'user',
+          'canEdit': false,
+          'canDelete': false,
+          // បន្ថែម firstName, lastName ប្រសិនបើចង់
+          'firstName': _firstNameController.text.trim(),
+          'lastName': _lastNameController.text.trim(),
+        };
+
+        // Call your backend API to create user profile
         final response = await http.post(
-          url,
-          headers: {"Content-Type": "application/json"},
-          body: json.encode(newUser.toJson()), // <-- Use toJson() here
+          Uri.parse("http://localhost:3000/api/users/register"),
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization":
+                "Bearer $idToken", // Pass token in header for security
+          },
+          body: json.encode(profileData),
         );
 
         final resBody = json.decode(response.body);
 
         if (response.statusCode == 201) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Registered: ${resBody['message']}")),
+            SnackBar(content: Text("Registered successfully! Please login.")),
           );
           Navigator.pushReplacement(
             context,
@@ -82,6 +98,16 @@ class _RegisterPageState extends State<RegisterPage> {
             ),
           );
         }
+      } on FirebaseAuthException catch (e) {
+        String message = "Registration failed.";
+        if (e.code == 'email-already-in-use') {
+          message = "This email is already in use.";
+        } else if (e.code == 'weak-password') {
+          message = "Password is too weak.";
+        }
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
       } catch (e) {
         ScaffoldMessenger.of(
           context,
