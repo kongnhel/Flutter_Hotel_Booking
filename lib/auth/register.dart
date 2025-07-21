@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/user_model.dart';
-import 'package:hotel_booking/screens/login.dart';
+import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/screens/root_app.dart';
 import 'package:hotel_booking/theme/color.dart';
 import 'package:http/http.dart' as http;

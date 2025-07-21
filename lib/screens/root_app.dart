@@ -6,11 +6,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hotel_booking/models/user_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:hotel_booking/screens/login.dart';
+import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/screens/profile.dart';
-import 'package:hotel_booking/screens/register.dart';
+import 'package:hotel_booking/auth/register.dart';
 import 'package:hotel_booking/screens/search.dart';
-import 'package:hotel_booking/screens/sidebar_screen/banner_screen.dart';
+import 'package:hotel_booking/screens/sidebar_screen/room_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/buyers_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/categories_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/orders_screen.dart';
@@ -75,8 +75,8 @@ class _RootAppState extends State<RootApp> {
         case HomePage.id:
           _selectedScreen = const HomePage();
           break;
-        case BannerScreen.id:
-          _selectedScreen = const BannerScreen();
+        case RoomAdminScreen.id:
+          _selectedScreen = const RoomAdminScreen();
           break;
         case ProductsScreen.id:
           _selectedScreen = const ProductsScreen();
@@ -233,8 +233,8 @@ class _RootAppState extends State<RootApp> {
                   icon: Icons.home_outlined,
                 ),
                 AdminMenuItem(
-                  title: 'Banner',
-                  route: BannerScreen.id,
+                  title: 'Room',
+                  route: RoomAdminScreen.id,
                   icon: Icons.image_outlined,
                 ),
                 AdminMenuItem(

@@ -6,7 +6,7 @@ import 'package:hotel_booking/screens/root_app.dart'; // The main admin dashboar
 import 'package:hotel_booking/theme/color.dart'; // Your app's custom color theme
 import 'package:http/http.dart' as http; // For making HTTP requests
 
-import 'package:hotel_booking/screens/register.dart'; // For navigating to the registration page
+import 'package:hotel_booking/auth/register.dart'; // For navigating to the registration page
 import 'package:shared_preferences/shared_preferences.dart'; // For local data storage (e.g., user session)
 
 /// A stateful widget for the user login page.

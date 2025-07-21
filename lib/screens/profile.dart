@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart'; // Unified import for Material and Cupertino widgets
 import 'package:hotel_booking/models/user_model.dart';
-import 'package:hotel_booking/screens/login.dart';
+import 'package:hotel_booking/auth/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hotel_booking/theme/color.dart';
 

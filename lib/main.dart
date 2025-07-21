@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/screens/login.dart';
+import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/screens/root_app.dart';
 import 'package:hotel_booking/theme/color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
