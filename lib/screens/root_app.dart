@@ -32,6 +32,7 @@ class _RootAppState extends State<RootApp> {
   String _currentRoute = HomePage.id;
   UserModel? _currentUser;
   String? _userEmail;
+  bool _isLoadingUser = true; // New state to track user loading
 
   @override
   void initState() {
@@ -39,35 +40,53 @@ class _RootAppState extends State<RootApp> {
     _loadUserSession();
   }
 
+  /// Loads the user session from SharedPreferences.
+  /// Sets _currentUser and _userEmail based on stored data.
   Future<void> _loadUserSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('user');
-    print('User JSON in SharedPreferences: $userJson'); // Debug print
-    final email = prefs.getString('email');
+    setState(() {
+      _isLoadingUser = true; // Start loading
+    });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('user');
+      final email = prefs.getString('email');
 
-    if (userJson != null && email != null) {
-      try {
-        final userMap = json.decode(userJson);
-        setState(() {
-          _userEmail = email;
-          _currentUser = UserModel.fromJson(userMap);
-          print('Current user role: ${_currentUser?.role}');
-        });
-      } catch (e) {
-        print('Failed to decode user JSON: $e');
+      if (userJson != null && email != null) {
+        try {
+          final userMap = json.decode(userJson);
+          setState(() {
+            _userEmail = email;
+            _currentUser = UserModel.fromJson(userMap);
+          });
+        } catch (e) {
+          debugPrint('Failed to decode user JSON: $e');
+          // If decoding fails, treat as no user logged in
+          setState(() {
+            _userEmail = null;
+            _currentUser = null;
+          });
+        }
+      } else {
+        // No user data found
         setState(() {
           _userEmail = null;
           _currentUser = null;
         });
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error loading user session from SharedPreferences: $e');
       setState(() {
         _userEmail = null;
         _currentUser = null;
       });
+    } finally {
+      setState(() {
+        _isLoadingUser = false; // End loading
+      });
     }
   }
 
+  /// Selects the screen to display based on the selected AdminMenuItem.
   void _screenSelector(AdminMenuItem item) {
     setState(() {
       _currentRoute = item.route ?? HomePage.id;
@@ -105,6 +124,7 @@ class _RootAppState extends State<RootApp> {
     });
   }
 
+  /// Logs out the user by clearing session data and navigating to the login page.
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('user');
@@ -118,30 +138,58 @@ class _RootAppState extends State<RootApp> {
     }
   }
 
-  Widget buildUserIcon() {
-    if (_userEmail != null) {
-      return ClipOval(
-        child: Image.asset(
-          "assets/images/profile_emty.png",
-          width: 32,
-          height: 32,
-          fit: BoxFit.cover,
+  /// Builds the user icon for the app bar.
+  /// Displays the user's profile image if available, otherwise a default avatar.
+  Widget _buildUserAppBarIcon() {
+    // If a profile image URL exists, try to load it.
+    if (_currentUser?.profileImage != null &&
+        _currentUser!.profileImage!.isNotEmpty) {
+      return CircleAvatar(
+        radius: 16, // Adjust size as needed for app bar
+        backgroundImage: NetworkImage(_currentUser!.profileImage!),
+        backgroundColor: Colors.blueGrey, // Fallback background
+        onBackgroundImageError: (exception, stackTrace) {
+          debugPrint('Error loading profile image: $exception');
+          // Fallback to default initial if image fails to load
+        },
+        child:
+            _currentUser?.profileImage == null ||
+                _currentUser!.profileImage!.isEmpty
+            ? Text(
+                _userEmail?.isNotEmpty == true
+                    ? _userEmail![0].toUpperCase()
+                    : "?",
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              )
+            : null, // No child if image is loaded
+      );
+    } else if (_userEmail != null && _userEmail!.isNotEmpty) {
+      // If no profile image but email exists, show initial
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor: AppColor.labelColor, // Or any suitable color
+        child: Text(
+          _userEmail![0].toUpperCase(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
     } else {
+      // If no user email, show a generic person icon for registration
       return Icon(Icons.person_add_alt_1, color: AppColor.darker, size: 24);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_currentUser == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(), // Loading UI
-        ),
-      );
+    // Show a loading indicator while user session is being loaded
+    if (_isLoadingUser) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
+
     return AdminScaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -163,8 +211,10 @@ class _RootAppState extends State<RootApp> {
             ),
             const Spacer(),
             IconButton(
-              icon: buildUserIcon(),
-              tooltip: _userEmail ?? "Register",
+              icon: _buildUserAppBarIcon(), // Use the new function here
+              tooltip: _userEmail != null
+                  ? "Profile"
+                  : "Register", // More descriptive tooltip
               onPressed: () {
                 if (_userEmail != null) {
                   Navigator.push(
@@ -172,7 +222,9 @@ class _RootAppState extends State<RootApp> {
                     MaterialPageRoute(
                       builder: (_) => ProfilePage(email: _userEmail!),
                     ),
-                  );
+                  ).then(
+                    (_) => _loadUserSession(),
+                  ); // Reload session after returning from profile
                 } else {
                   Navigator.push(
                     context,
@@ -224,7 +276,6 @@ class _RootAppState extends State<RootApp> {
         ),
         onSelected: _screenSelector,
         selectedRoute: _currentRoute,
-
         items: _currentUser?.role == 'admin'
             ? [
                 AdminMenuItem(

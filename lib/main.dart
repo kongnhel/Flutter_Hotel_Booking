@@ -43,6 +43,7 @@ class MyApp extends StatelessWidget {
       title: 'Hotel Booking kong is cooking',
       theme: ThemeData(primaryColor: AppColor.primary),
 
+      // ប្រសិនបើ email មាន (មាន session អ្នកប្រើប្រាស់) ទៅ RootApp, មិនដំណើរការ login ទៀត
       home: userEmail != null ? const RootApp() : const LoginPage(),
 
       routes: {

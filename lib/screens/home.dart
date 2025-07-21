@@ -5,10 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/room_model.dart';
 import 'package:hotel_booking/screens/order_page.dart';
 import 'package:hotel_booking/theme/color.dart';
-import 'package:hotel_booking/utils/data.dart';
-import 'package:hotel_booking/widgets/city_item.dart';
 import 'package:hotel_booking/widgets/feature_item.dart';
-import 'package:hotel_booking/widgets/recommend_item.dart';
 import 'package:http/http.dart' as http;
 
 class HomePage extends StatefulWidget {
@@ -21,6 +18,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  String? selectedLocation;
   List<Room> featuredRooms = [];
   bool isLoading = true;
 
@@ -127,10 +125,17 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildFeatured() {
     if (isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
-    if (featuredRooms.isEmpty) {
-      return Center(child: Text("No featured rooms available."));
+
+    final filteredRooms = selectedLocation == null
+        ? featuredRooms
+        : featuredRooms
+              .where((room) => room.location == selectedLocation)
+              .toList();
+
+    if (filteredRooms.isEmpty) {
+      return const Center(child: Text("No rooms found in this location."));
     }
 
     return CarouselSlider(
@@ -140,25 +145,27 @@ class _HomePageState extends State<HomePage> {
         disableCenter: true,
         viewportFraction: .75,
       ),
-      items: List.generate(featuredRooms.length, (index) {
-        final room = featuredRooms[index];
-
+      items: List.generate(filteredRooms.length, (index) {
+        final room = filteredRooms[index];
         return FeatureItem(
           data: room,
           onTapFavorite: () {
             setState(() {
-              featuredRooms[index] = Room(
-                id: room.id,
-                name: room.name,
-                image: room.image,
-                price: room.price,
-                type: room.type,
-                rate: room.rate,
-                location: room.location,
-                isFavorited: !room.isFavorited, // toggle favorite
-                albumImages: room.albumImages,
-                description: room.description,
-              );
+              final i = featuredRooms.indexWhere((r) => r.id == room.id);
+              if (i != -1) {
+                featuredRooms[i] = Room(
+                  id: room.id,
+                  name: room.name,
+                  image: room.image,
+                  price: room.price,
+                  type: room.type,
+                  rate: room.rate,
+                  location: room.location,
+                  isFavorited: !room.isFavorited,
+                  albumImages: room.albumImages,
+                  description: room.description,
+                );
+              }
             });
           },
           onTap: () {
@@ -174,18 +181,63 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // Widget _buildCities() {
+  //   return SingleChildScrollView(
+  //     padding: const EdgeInsets.fromLTRB(15, 5, 0, 10),
+  //     scrollDirection: Axis.horizontal,
+  //     child: Row(
+  //       children: List.generate(
+  //         cities.length,
+  //         (index) => Padding(
+  //           padding: const EdgeInsets.only(right: 8),
+  //           child: CityItem(data: cities[index]),
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _buildCities() {
+    final uniqueLocations = featuredRooms
+        .map((room) => room.location)
+        .toSet()
+        .toList();
+
+    final List<String> allOptions = ['All Rooms', ...uniqueLocations];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(15, 5, 0, 10),
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: List.generate(
-          cities.length,
-          (index) => Padding(
+        children: List.generate(allOptions.length, (index) {
+          final location = allOptions[index];
+          final isSelected =
+              (selectedLocation == null && location == 'All Rooms') ||
+              (selectedLocation == location);
+
+          return Padding(
             padding: const EdgeInsets.only(right: 8),
-            child: CityItem(data: cities[index]),
-          ),
-        ),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (location == 'All Rooms') {
+                    selectedLocation = null;
+                  } else {
+                    selectedLocation = location;
+                  }
+                });
+              },
+              child: Chip(
+                label: Text(location),
+                backgroundColor: isSelected
+                    ? AppColor.inActiveColor
+                    : Colors.grey[300],
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : Colors.black,
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

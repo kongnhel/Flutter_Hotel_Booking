@@ -238,7 +238,7 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
       price: priceController.text.trim(),
       type: selectedType,
       rate: '4.5', // Default rate
-      location: locationController.text.trim(),
+      location: selectedLocation ?? '',
       isFavorited: false, // Default favorited status
       albumImages: const [], // Empty album images for new room
       description: descriptionController.text.trim(),
