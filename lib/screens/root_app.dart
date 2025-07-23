@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_admin_scaffold/admin_scaffold.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hotel_booking/models/user_model.dart';
+import 'package:hotel_booking/screens/sidebar_screen/room/add_room.dart';
+import 'package:hotel_booking/screens/sidebar_screen/room/room_list.dart'
+    show RoomListScreen;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/screens/profile.dart';
 import 'package:hotel_booking/auth/register.dart';
 import 'package:hotel_booking/screens/search.dart';
-import 'package:hotel_booking/screens/sidebar_screen/room_screen.dart';
+import 'package:hotel_booking/screens/sidebar_screen/room/room_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/buyers_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/categories_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/orders_screen.dart';
@@ -94,8 +97,11 @@ class _RootAppState extends State<RootApp> {
         case HomePage.id:
           _selectedScreen = const HomePage();
           break;
-        case RoomAdminScreen.id:
-          _selectedScreen = const RoomAdminScreen();
+        case RoomListScreen.id:
+          _selectedScreen = const RoomListScreen();
+          break;
+        case AddRoomScreen.id:
+          _selectedScreen = const AddRoomScreen();
           break;
         case ProductsScreen.id:
           _selectedScreen = const ProductsScreen();
@@ -285,26 +291,28 @@ class _RootAppState extends State<RootApp> {
                 ),
                 AdminMenuItem(
                   title: 'Room',
-                  route: RoomAdminScreen.id,
                   icon: Icons.image_outlined,
+                  children: [
+                    AdminMenuItem(
+                      title: 'Add Room',
+                      route: AddRoomScreen.id,
+                      icon: Icons.add,
+                    ),
+                    AdminMenuItem(
+                      title: 'View Rooms',
+                      route: RoomListScreen.id,
+                      icon: Icons.view_list_outlined,
+                    ),
+                  ],
                 ),
-                AdminMenuItem(
-                  title: 'Products',
-                  route: ProductsScreen.id,
-                  icon: Icons.production_quantity_limits_outlined,
-                ),
-                AdminMenuItem(
-                  title: 'Categories',
-                  route: CategoriesScreen.id,
-                  icon: Icons.category_outlined,
-                ),
+
                 AdminMenuItem(
                   title: 'Orders',
                   route: OrdersScreen.id,
                   icon: Icons.shopping_cart_outlined,
                 ),
                 AdminMenuItem(
-                  title: 'Buyers',
+                  title: 'Users Management',
                   route: BuyersScreen.id,
                   icon: Icons.person_outline,
                 ),

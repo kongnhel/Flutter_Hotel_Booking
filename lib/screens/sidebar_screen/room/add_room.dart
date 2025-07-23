@@ -1,50 +1,44 @@
-import 'dart:io'; // Used for File operations on non-web platforms
-import 'dart:typed_data'; // Used for Uint8List on web
-import 'dart:convert'; // Used for JSON encoding/decoding
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
 
-import 'package:flutter/foundation.dart'; // Used for kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/room_model.dart'; // Ensure this path is correct
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 
-// ---
-// Constants
-// ---
 // IMPORTANT: Update this URL for production deployments!
-// For Android Emulators, '10.0.2.2' maps to your host machine's localhost.
-// For iOS Simulators, 'localhost' or '127.0.0.1' usually works.
-// For physical devices, you'll need your machine's local IP address or a deployed backend URL.
 const String kBaseUrl =
     'http://localhost:3000/api'; // Or 'http://10.0.2.2:3000/api' for Android Emulator
 
-class RoomAdminScreen extends StatefulWidget {
-  static const String id = '/RoomAdminScreen';
+class AddRoomScreen extends StatefulWidget {
+  static const String id = '/AddRoomScreen';
+  final Room? roomToEdit; // Optional parameter for editing
 
-  const RoomAdminScreen({super.key});
+  const AddRoomScreen({super.key, this.roomToEdit});
 
   @override
-  State<RoomAdminScreen> createState() => _RoomAdminScreenState();
+  State<AddRoomScreen> createState() => _AddRoomScreenState();
 }
 
-class _RoomAdminScreenState extends State<RoomAdminScreen> {
+class _AddRoomScreenState extends State<AddRoomScreen> {
   final _formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final priceController = TextEditingController();
-  final locationController = TextEditingController();
   final descriptionController = TextEditingController();
 
   String? uploadedImageUrl;
   String? _editingRoomId; // To keep track of the room being edited
 
   // Cloudinary config
-  // Consider moving to environment variables for production
   final String _cloudName = 'dlykpbl7s';
   final String _uploadPreset = 'rooms_images';
 
-  String selectedType = 'Standard';
-  final List<String> types = const ['Standard', 'Deluxe', 'Superior'];
+  // Store fetched room types from API
+  List<Map<String, dynamic>> roomTypes = [];
+  String? selectedRoomTypeId;
 
   String selectedLocation = 'Phnom Penh'; // Default selected location
   final List<String> locations = const [
@@ -56,24 +50,93 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
     'Kep',
     'Koh Rong',
     'Beanteay Meanchey',
-    '',
   ];
-
-  List<Room> rooms = [];
 
   @override
   void initState() {
     super.initState();
-    fetchRooms();
+    debugPrint('AddRoomScreen: initState called.');
+    fetchRoomTypes().then((_) {
+      // After room types are fetched, then populate form if editing
+      if (widget.roomToEdit != null) {
+        _editingRoomId = widget.roomToEdit!.id;
+        nameController.text = widget.roomToEdit!.name;
+        priceController.text = widget.roomToEdit!.price;
+        descriptionController.text = widget.roomToEdit!.description;
+        uploadedImageUrl = widget.roomToEdit!.image;
+        selectedLocation = widget.roomToEdit!.location;
+
+        // Set selectedRoomTypeId based on the room being edited
+        selectedRoomTypeId = widget.roomToEdit!.roomTypeId;
+        debugPrint(
+          'AddRoomScreen: Populated form for editing room ID: $_editingRoomId, Type ID: $selectedRoomTypeId',
+        );
+      } else {
+        // If adding a new room and no type is selected, default to the first available
+        if (selectedRoomTypeId == null && roomTypes.isNotEmpty) {
+          setState(() {
+            selectedRoomTypeId = roomTypes[0]['id'];
+            debugPrint(
+              'AddRoomScreen: Defaulting selectedRoomTypeId to: ${selectedRoomTypeId}',
+            );
+          });
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
     nameController.dispose();
     priceController.dispose();
-    locationController.dispose();
     descriptionController.dispose();
+    debugPrint('AddRoomScreen: dispose called.');
     super.dispose();
+  }
+
+  Future<void> fetchRoomTypes() async {
+    debugPrint('AddRoomScreen: Starting fetchRoomTypes...');
+    try {
+      final res = await http.get(Uri.parse('$kBaseUrl/room_types'));
+      if (!mounted) {
+        debugPrint(
+          'AddRoomScreen: fetchRoomTypes completed, but widget is not mounted.',
+        );
+        return;
+      }
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        setState(() {
+          roomTypes = data
+              .map<Map<String, dynamic>>(
+                (e) => {'id': e['id'], 'name': e['name']},
+              )
+              .toList();
+
+          // Ensure selectedRoomTypeId is valid after fetching types
+          if (selectedRoomTypeId != null &&
+              !roomTypes.any((type) => type['id'] == selectedRoomTypeId)) {
+            // If the previously selected ID is no longer valid, reset it
+            selectedRoomTypeId = null;
+          }
+
+          if (selectedRoomTypeId == null && roomTypes.isNotEmpty) {
+            selectedRoomTypeId = roomTypes[0]['id'];
+          }
+          debugPrint(
+            'AddRoomScreen: Successfully fetched ${roomTypes.length} room types. Selected: $selectedRoomTypeId',
+          );
+        });
+      } else {
+        debugPrint(
+          'AddRoomScreen: Failed to fetch room types: ${res.statusCode}, Body: ${res.body}',
+        );
+        _showSnackBar('Failed to load room types.', isError: true);
+      }
+    } catch (e) {
+      debugPrint('AddRoomScreen: Error fetching room types: $e');
+      _showSnackBar('Network error while fetching room types.', isError: true);
+    }
   }
 
   /// Displays a SnackBar with the given [message] and [isError] status.
@@ -93,23 +156,21 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
     _formKey.currentState?.reset();
     nameController.clear();
     priceController.clear();
-    // locationController.clear();
     descriptionController.clear();
     setState(() {
       uploadedImageUrl = null;
-      selectedType = 'Standard';
+      selectedRoomTypeId = roomTypes.isNotEmpty ? roomTypes[0]['id'] : null;
       selectedLocation = 'Phnom Penh';
       _editingRoomId = null; // Clear editing state
     });
+    debugPrint('AddRoomScreen: Form reset.');
   }
 
-  // ---
-  // Image Upload Logic
-  // ---
+  // --- Image Upload Logic (same as before) ---
   Future<String?> uploadImage(XFile pickedFile) async {
+    debugPrint('AddRoomScreen: Starting image upload...');
     try {
       if (kIsWeb) {
-        // Web platform upload using http.MultipartRequest
         Uint8List bytes = await pickedFile.readAsBytes();
 
         var request = http.MultipartRequest(
@@ -129,31 +190,34 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
         if (response.statusCode == 200) {
           final resStr = await response.stream.bytesToString();
           final jsonRes = jsonDecode(resStr);
+          debugPrint(
+            'AddRoomScreen: Image uploaded successfully (Web). URL: ${jsonRes['secure_url']}',
+          );
           return jsonRes['secure_url'];
         } else {
           final resStr = await response.stream.bytesToString();
           debugPrint(
-            'Web Image Upload failed: ${response.statusCode}, Response: $resStr',
+            'AddRoomScreen: Web Image Upload failed: ${response.statusCode}, Response: $resStr',
           );
           return null;
         }
       } else {
-        // Mobile/Desktop platform upload using cloudinary_public package
         final cloudinary = CloudinaryPublic(_cloudName, _uploadPreset);
         File file = File(pickedFile.path);
 
-        CloudinaryResponse res = await cloudinary.uploadFile(
+        final res = await cloudinary.uploadFile(
           CloudinaryFile.fromFile(
             file.path,
-            folder:
-                'flutter_hotel_booking_rooms', // Specify a folder on Cloudinary
+            folder: 'flutter_hotel_booking_rooms',
           ),
         );
-
+        debugPrint(
+          'AddRoomScreen: Image uploaded successfully (Mobile/Desktop). URL: ${res.secureUrl}',
+        );
         return res.secureUrl;
       }
     } catch (e) {
-      debugPrint('Image Upload Error: $e');
+      debugPrint('AddRoomScreen: Image Upload Error: $e');
       return null;
     }
   }
@@ -164,13 +228,14 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
 
     if (picked == null) {
       _showSnackBar('No image selected.');
+      debugPrint('AddRoomScreen: No image selected.');
       return;
     }
 
     _showSnackBar('Uploading image...');
 
     final url = await uploadImage(picked);
-    debugPrint("Uploaded URL: $url");
+    debugPrint("AddRoomScreen: Uploaded URL: $url");
 
     if (!mounted) return;
 
@@ -184,45 +249,26 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
     }
   }
 
-  // ---
-  // API Calls
-  // ---
-  Future<void> fetchRooms() async {
-    try {
-      final res = await http.get(Uri.parse('$kBaseUrl/rooms'));
-      if (!mounted) return;
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        setState(() {
-          rooms = data.map((e) => Room.fromJson(e)).toList();
-        });
-      } else {
-        debugPrint(
-          'Failed to fetch rooms, status: ${res.statusCode}, Body: ${res.body}',
-        );
-        _showSnackBar(
-          'Failed to load rooms. Status: ${res.statusCode}',
-          isError: true,
-        );
-      }
-    } catch (e) {
-      debugPrint('Error fetching rooms: $e');
-      _showSnackBar('Network error while fetching rooms.', isError: true);
-    }
-  }
-
+  // --- API Calls ---
   Future<void> saveRoom() async {
+    debugPrint('AddRoomScreen: saveRoom called. Editing ID: $_editingRoomId');
     if (!_formKey.currentState!.validate()) {
+      debugPrint('AddRoomScreen: Form validation failed.');
       return;
     }
 
     if (uploadedImageUrl == null || uploadedImageUrl!.isEmpty) {
       _showSnackBar('Please upload an image for the room.', isError: true);
+      debugPrint('AddRoomScreen: No image uploaded.');
       return;
     }
 
-    // Determine if we are adding or updating based on _editingRoomId
+    if (selectedRoomTypeId == null) {
+      _showSnackBar('Please select a room type.', isError: true);
+      debugPrint('AddRoomScreen: No room type selected.');
+      return;
+    }
+
     if (_editingRoomId == null) {
       await _addRoom();
     } else {
@@ -231,16 +277,17 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
   }
 
   Future<void> _addRoom() async {
+    debugPrint('AddRoomScreen: _addRoom called.');
     final newRoom = Room(
       id: null,
       name: nameController.text.trim(),
       image: uploadedImageUrl!,
       price: priceController.text.trim(),
-      type: selectedType,
-      rate: '4.5', // Default rate
-      location: selectedLocation ?? '',
-      isFavorited: false, // Default favorited status
-      albumImages: const [], // Empty album images for new room
+      roomTypeId: selectedRoomTypeId!,
+      rate: '4.5',
+      location: selectedLocation,
+      isFavorited: false,
+      albumImages: const [],
       description: descriptionController.text.trim(),
     );
 
@@ -248,20 +295,26 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
       final res = await http.post(
         Uri.parse('$kBaseUrl/rooms'),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode(
-          newRoom.toJson()..remove('id'),
-        ), // Don't send ID for new room
+        body: jsonEncode(newRoom.toJson()..remove('id')),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint(
+          'AddRoomScreen: _addRoom completed, but widget is not mounted.',
+        );
+        return;
+      }
 
       if (res.statusCode == 201) {
         _showSnackBar('Room added successfully!');
         _resetForm();
-        fetchRooms();
+        debugPrint(
+          'AddRoomScreen: Room added successfully. Popping with true.',
+        );
+        Navigator.pop(context, true); // Pop with true to indicate success
       } else {
         debugPrint(
-          'Failed to add room. Status: ${res.statusCode}, Body: ${res.body}',
+          'AddRoomScreen: Failed to add room. Status: ${res.statusCode}, Body: ${res.body}',
         );
         _showSnackBar(
           'Failed to add room. Status: ${res.statusCode}.',
@@ -269,7 +322,7 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
         );
       }
     } catch (e) {
-      debugPrint('Add room error: $e');
+      debugPrint('AddRoomScreen: Add room error: $e');
       _showSnackBar(
         'Network error. Failed to add room. Please try again.',
         isError: true,
@@ -278,17 +331,17 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
   }
 
   Future<void> _updateRoom(String id) async {
+    debugPrint('AddRoomScreen: _updateRoom called for ID: $id');
     final updatedRoom = Room(
       id: id,
       name: nameController.text.trim(),
       image: uploadedImageUrl!,
       price: priceController.text.trim(),
-      type: selectedType,
-      rate: '4.5', // Keep default or fetch original if needed
-      // location: locationController.text.trim(),
+      roomTypeId: selectedRoomTypeId!,
+      rate: '4.5',
       location: selectedLocation,
-      isFavorited: false, // Keep default or fetch original if needed
-      albumImages: const [], // Keep empty or fetch original if needed
+      isFavorited: false,
+      albumImages: const [],
       description: descriptionController.text.trim(),
     );
 
@@ -299,95 +352,129 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
         body: jsonEncode(updatedRoom.toJson()),
       );
 
-      if (!mounted) return;
+      if (!mounted) {
+        debugPrint(
+          'AddRoomScreen: _updateRoom completed, but widget is not mounted.',
+        );
+        return;
+      }
 
       if (res.statusCode == 200) {
         _showSnackBar('Room updated successfully!');
-        _resetForm(); // Reset form after successful update
-        fetchRooms(); // Refresh list
+        _resetForm();
+        debugPrint(
+          'AddRoomScreen: Room updated successfully. Popping with true.',
+        );
+        Navigator.pop(context, true); // Pop with true to indicate success
       } else {
-        debugPrint('Update failed: ${res.body}');
+        debugPrint('AddRoomScreen: Update failed: ${res.body}');
         _showSnackBar(
           'Failed to update room. Status: ${res.statusCode}',
           isError: true,
         );
       }
     } catch (e) {
-      debugPrint('Update error: $e');
+      debugPrint('AddRoomScreen: Update error: $e');
       _showSnackBar('Network error. Failed to update room.', isError: true);
     }
   }
 
-  Future<void> deleteRoom(String? id) async {
-    if (id == null) return;
-
+  Future<void> _addRoomType(String name) async {
+    debugPrint('AddRoomScreen: _addRoomType called with name: $name');
     try {
-      final res = await http.delete(Uri.parse('$kBaseUrl/rooms/$id'));
+      final response = await http.post(
+        Uri.parse('$kBaseUrl/room_types'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'name': name}),
+      );
 
-      if (!mounted) return;
-
-      if (res.statusCode == 200) {
-        _showSnackBar('Room deleted successfully');
-        fetchRooms();
-      } else {
-        debugPrint('Delete failed: ${res.body}');
-        _showSnackBar(
-          'Failed to delete room. Status: ${res.statusCode}',
-          isError: true,
+      if (!mounted) {
+        debugPrint(
+          'AddRoomScreen: _addRoomType completed, but widget is not mounted.',
         );
+        return;
+      }
+
+      if (response.statusCode == 201) {
+        _showSnackBar('Room type added');
+        debugPrint(
+          'AddRoomScreen: Room type added successfully. Refreshing dropdown.',
+        );
+        await fetchRoomTypes(); // refresh the dropdown
+      } else {
+        debugPrint(
+          'AddRoomScreen: Failed to add room type: ${response.statusCode}, Body: ${response.body}',
+        );
+        _showSnackBar('Failed to add room type.', isError: true);
       }
     } catch (e) {
-      debugPrint('Delete error: $e');
-      _showSnackBar('Network error. Failed to delete room.', isError: true);
+      debugPrint('AddRoomScreen: Add room type error: $e');
+      _showSnackBar('Network error. Please try again.', isError: true);
     }
   }
 
-  /// Populates the form fields with the data of the given [room] for editing.
-  void populateFormForEdit(Room room) {
-    setState(() {
-      _editingRoomId = room.id; // Set the ID of the room being edited
-      nameController.text = room.name;
-      priceController.text = room.price;
-      // locationController.text = room.location;
-      selectedLocation = room.location;
-
-      descriptionController.text = room.description;
-      uploadedImageUrl = room.image;
-      selectedType = room.type;
-    });
-    print('Room location for editing: ${room.location}');
-    print('Available locations in dropdown: $locations');
-
-    // Scroll to top for editing experience
-    if (_formKey.currentContext != null) {
-      Scrollable.ensureVisible(
-        _formKey.currentContext!,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    }
+  void _showAddRoomTypeDialog() {
+    final TextEditingController typeController = TextEditingController();
+    debugPrint('AddRoomScreen: Showing Add Room Type dialog.');
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Add Room Type'),
+          content: TextField(
+            controller: typeController,
+            decoration: const InputDecoration(
+              labelText: 'Room Type Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                debugPrint('AddRoomScreen: Add Room Type dialog cancelled.');
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final name = typeController.text.trim();
+                if (name.isEmpty) {
+                  debugPrint('AddRoomScreen: Room type name is empty.');
+                  return;
+                }
+                Navigator.of(ctx).pop();
+                await _addRoomType(name);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  // ---
-  // UI Build
-  // ---
   @override
   Widget build(BuildContext context) {
+    debugPrint(
+      'AddRoomScreen: build method called. Selected Room Type ID: $selectedRoomTypeId',
+    );
     return Scaffold(
-      appBar: AppBar(title: const Text('Admin Room Manager')),
+      appBar: AppBar(
+        title: Text(_editingRoomId == null ? 'Add New Room' : 'Edit Room'),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---
-              // Add/Edit Room Form
-              // ---
               Text(
-                _editingRoomId == null ? 'Add New Room' : 'Edit Room',
+                _editingRoomId == null
+                    ? 'Add New Room Details'
+                    : 'Edit Room Details',
                 style: const TextStyle(
-                  fontSize: 24, // Slightly larger for section title
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -409,8 +496,7 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: priceController,
-                      keyboardType:
-                          TextInputType.number, // Ensure numeric input
+                      keyboardType: TextInputType.number,
                       decoration: const InputDecoration(
                         labelText: 'Price',
                         border: OutlineInputBorder(),
@@ -432,7 +518,6 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    // Display uploaded image or placeholder
                     uploadedImageUrl != null &&
                             uploadedImageUrl!.startsWith("http")
                         ? ClipRRect(
@@ -473,36 +558,48 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      value: selectedType,
-                      decoration: const InputDecoration(
-                        labelText: 'Room Type',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: types.map((type) {
-                        return DropdownMenuItem<String>(
-                          value: type,
-                          child: Text(type),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => selectedType = val);
-                        }
-                      },
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedRoomTypeId,
+                            decoration: const InputDecoration(
+                              labelText: 'Room Type',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: roomTypes.map((type) {
+                              return DropdownMenuItem<String>(
+                                value: type['id'],
+                                child: Text(type['name']),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => selectedRoomTypeId = val);
+                                debugPrint(
+                                  'AddRoomScreen: Selected Room Type ID: $val',
+                                );
+                              }
+                            },
+                            validator: (val) => val == null || val.isEmpty
+                                ? 'Room type is required'
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Colors.blue),
+                          tooltip: 'Add Room Type',
+                          onPressed: _showAddRoomTypeDialog,
+                        ),
+                      ],
                     ),
+
                     const SizedBox(height: 16),
-                    // TextFormField(
-                    //   controller: locationController,
-                    //   decoration: const InputDecoration(
-                    //     labelText: 'Location',
-                    //     border: OutlineInputBorder(),
-                    //   ),
-                    //   validator: (val) =>
-                    //       val!.trim().isEmpty ? 'Location is required' : null,
-                    // ),
                     DropdownButtonFormField<String>(
-                      value: selectedLocation, // Set the current value
+                      value: selectedLocation,
                       decoration: const InputDecoration(
                         labelText: 'Location',
                         border: OutlineInputBorder(),
@@ -515,9 +612,8 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) {
-                          setState(
-                            () => selectedLocation = val,
-                          ); // Update selectedLocation
+                          setState(() => selectedLocation = val);
+                          debugPrint('AddRoomScreen: Selected Location: $val');
                         }
                       },
                       validator: (val) => val == null || val.isEmpty
@@ -527,11 +623,10 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: descriptionController,
-                      maxLines: 3, // Allow more lines for description
+                      maxLines: 3,
                       decoration: const InputDecoration(
                         labelText: 'Description',
-                        alignLabelWithHint:
-                            true, // Aligns label to top for multiline
+                        alignLabelWithHint: true,
                         border: OutlineInputBorder(),
                       ),
                       validator: (val) => val!.trim().isEmpty
@@ -540,9 +635,9 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
-                      width: double.infinity, // Make button full width
+                      width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: saveRoom, // Use saveRoom for both add/edit
+                        onPressed: saveRoom,
                         icon: Icon(
                           _editingRoomId == null ? Icons.add_home : Icons.save,
                         ),
@@ -561,7 +656,16 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                         child: SizedBox(
                           width: double.infinity,
                           child: OutlinedButton.icon(
-                            onPressed: _resetForm,
+                            onPressed: () {
+                              debugPrint(
+                                'AddRoomScreen: Cancel Edit button pressed. Popping with false.',
+                              );
+                              _resetForm();
+                              Navigator.pop(
+                                context,
+                                false,
+                              ); // Pop without success
+                            },
                             icon: const Icon(Icons.cancel),
                             label: const Text('Cancel Edit'),
                             style: OutlinedButton.styleFrom(
@@ -573,121 +677,6 @@ class _RoomAdminScreenState extends State<RoomAdminScreen> {
                   ],
                 ),
               ),
-              // ---
-              // Room List Section
-              // ---
-              const Divider(
-                height: 48,
-                thickness: 1,
-              ), // More substantial divider
-              const Text(
-                'Existing Rooms',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              if (rooms.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(20.0),
-                    child: Text(
-                      'No rooms added yet.',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                  ),
-                )
-              else
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: rooms.length,
-                  itemBuilder: (context, index) {
-                    final room = rooms[index];
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8),
-                      elevation: 2,
-                      child: ListTile(
-                        // Adjusted contentPadding for a bit more horizontal space
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
-                        ),
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: Image.network(
-                            room.image,
-                            width: 60, // Slightly reduced leading image width
-                            height: 60, // Slightly reduced leading image height
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              width: 60,
-                              height: 60,
-                              color: Colors.grey[300],
-                              child: const Icon(
-                                Icons.broken_image,
-                                color: Colors.grey,
-                                size: 30, // Adjust size for error icon
-                              ),
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          room.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                          maxLines: 1, // Limit title to a single line
-                          overflow: TextOverflow
-                              .ellipsis, // Add ellipsis if it overflows
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Price: ${room.price}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Type: ${room.type}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              'Location: ${room.location}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.edit,
-                                color: Colors.blue,
-                                size: 24,
-                              ), // Explicit size
-                              onPressed: () => populateFormForEdit(room),
-                              tooltip:
-                                  'Edit Room', // Added tooltip for better UX
-                            ),
-                            // This is the delete button
-                            IconButton(
-                              icon: const Icon(
-                                Icons.delete,
-                                color: Colors.red,
-                                size: 24,
-                              ), // Explicit size
-                              onPressed: room.id != null
-                                  ? () => deleteRoom(room.id!)
-                                  : null,
-                              tooltip: 'Delete Room', // Added tooltip
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
             ],
           ),
         ),

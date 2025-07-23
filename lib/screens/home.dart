@@ -2,11 +2,16 @@ import 'dart:convert';
 
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/models/room_model.dart';
+import 'package:hotel_booking/models/roomType_model.dart'; // Make sure this path is correct
+import 'package:hotel_booking/models/room_model.dart'; // Make sure this path is correct
 import 'package:hotel_booking/screens/order_page.dart';
+import 'package:hotel_booking/screens/search.dart'; // Assuming search.dart is where kBaseUrl might be defined or you define it here
 import 'package:hotel_booking/theme/color.dart';
-import 'package:hotel_booking/widgets/feature_item.dart';
+import 'package:hotel_booking/widgets/feature_item.dart'; // Make sure this path is correct
 import 'package:http/http.dart' as http;
+
+// Define kBaseUrl here if it's not defined in a globally accessible file
+const String kBaseUrl = 'http://localhost:3000/api'; // Or your actual base URL
 
 class HomePage extends StatefulWidget {
   static const String id = '\HomePage';
@@ -19,22 +24,28 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? selectedLocation;
+  Map<String, String> roomTypeNames =
+      {}; // key: roomTypeId, value: roomTypeName
+
   List<Room> featuredRooms = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // _loadFeaturedRooms();
-    fetchFeaturedRooms();
+    // Fetch room types first, then rooms
+    fetchRoomTypes().then((_) {
+      fetchFeaturedRooms();
+    });
   }
 
   Future<void> fetchFeaturedRooms() async {
     try {
-      final res = await http.get(Uri.parse('http://localhost:3000/api/rooms'));
+      final res = await http.get(Uri.parse('$kBaseUrl/rooms')); // Use kBaseUrl
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         setState(() {
+          // Ensure roomTypeId is correctly mapped from the backend response
           featuredRooms = data.map((e) => Room.fromJson(e)).toList();
           isLoading = false;
         });
@@ -52,14 +63,22 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Future<void> _loadFeaturedRooms() async {
-  //   // example for local static list in your utils/data.dart
-  //   final List rawFeatures = features; // from your data.dart
-
-  //   setState(() {
-  //     featuredRooms = rawFeatures.map((e) => Room.fromJson(e)).toList();
-  //   });
-  // }
+  Future<void> fetchRoomTypes() async {
+    try {
+      final response = await http.get(Uri.parse('$kBaseUrl/room_types'));
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        List<RoomType> types = data.map((e) => RoomType.fromJson(e)).toList();
+        setState(() {
+          roomTypeNames = {for (var type in types) type.id: type.name};
+        });
+      } else {
+        print("Failed to load room types, status: ${response.statusCode}");
+      }
+    } catch (e) {
+      print('Error fetching room types: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,22 +168,26 @@ class _HomePageState extends State<HomePage> {
         final room = filteredRooms[index];
         return FeatureItem(
           data: room,
+          roomTypeName:
+              roomTypeNames[room.roomTypeId] ??
+              'Unknown Type', // <--- Pass the name here
           onTapFavorite: () {
             setState(() {
               final i = featuredRooms.indexWhere((r) => r.id == room.id);
               if (i != -1) {
-                featuredRooms[i] = Room(
+                final updatedRoom = Room(
                   id: room.id,
                   name: room.name,
                   image: room.image,
                   price: room.price,
-                  type: room.type,
+                  roomTypeId: room.roomTypeId, // Keep the ID
                   rate: room.rate,
                   location: room.location,
                   isFavorited: !room.isFavorited,
                   albumImages: room.albumImages,
                   description: room.description,
                 );
+                featuredRooms[i] = updatedRoom;
               }
             });
           },
@@ -172,7 +195,12 @@ class _HomePageState extends State<HomePage> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => OrderViewPage(roomData: room.toJson()),
+                builder: (context) => OrderViewPage(
+                  roomData: room.toJson(),
+                  roomTypeName:
+                      roomTypeNames[room.roomTypeId] ??
+                      'Unknown Type', // Also pass to OrderViewPage
+                ),
               ),
             );
           },
@@ -181,21 +209,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // Widget _buildCities() {
-  //   return SingleChildScrollView(
-  //     padding: const EdgeInsets.fromLTRB(15, 5, 0, 10),
-  //     scrollDirection: Axis.horizontal,
-  //     child: Row(
-  //       children: List.generate(
-  //         cities.length,
-  //         (index) => Padding(
-  //           padding: const EdgeInsets.only(right: 8),
-  //           child: CityItem(data: cities[index]),
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
   Widget _buildCities() {
     final uniqueLocations = featuredRooms
         .map((room) => room.location)
@@ -229,7 +242,8 @@ class _HomePageState extends State<HomePage> {
               child: Chip(
                 label: Text(location),
                 backgroundColor: isSelected
-                    ? AppColor.inActiveColor
+                    ? AppColor
+                          .inActiveColor // Replace with your primary color
                     : Colors.grey[300],
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : Colors.black,

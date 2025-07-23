@@ -8,9 +8,17 @@ class OrderViewPage extends StatelessWidget {
   /// The data for the room to be displayed.
   final Map<String, dynamic> roomData;
 
+  /// The human-readable name of the room type.
+  final String roomTypeName; // Add this new field
+
   /// Creates an [OrderViewPage].
   /// The [roomData] is required and contains all the details of the room.
-  const OrderViewPage({super.key, required this.roomData});
+  /// The [roomTypeName] is required to display the friendly name of the room type.
+  const OrderViewPage({
+    super.key,
+    required this.roomData,
+    required this.roomTypeName, // Make it required in the constructor
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -101,10 +109,11 @@ class OrderViewPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
+                      // Use the roomTypeName directly here
                       _buildDetailRow(
                         icon: Icons.category_outlined,
                         label: "Type:",
-                        value: roomData['type'] ?? 'N/A',
+                        value: roomTypeName, // Use the passed roomTypeName
                         style: textTheme.bodyLarge,
                         iconColor: Colors.grey[600],
                       ),

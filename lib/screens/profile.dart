@@ -851,14 +851,14 @@ class _ProfilePageState extends State<ProfilePage> {
             ElevatedButton(
               onPressed: _isLoading ? null : _updateProfile,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColor.primary,
+                backgroundColor: AppColor.cyan,
                 padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 minimumSize: const Size(double.infinity, 50),
                 elevation: 5,
-                shadowColor: AppColor.primary.withOpacity(0.4),
+                shadowColor: AppColor.cyan.withOpacity(0.4),
               ),
               child: _isLoading
                   ? const SizedBox(

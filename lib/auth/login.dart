@@ -245,8 +245,7 @@ class _LoginPageState extends State<LoginPage> {
                       ? null // Disable button while loading
                       : _loginUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppColor.primary, // Button background color
+                    backgroundColor: AppColor.cyan, // Button background color
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -297,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
                         "Register",
                         style: TextStyle(
                           color: AppColor
-                              .primary, // Primary color for the register link
+                              .cyan, // Primary color for the register link
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),

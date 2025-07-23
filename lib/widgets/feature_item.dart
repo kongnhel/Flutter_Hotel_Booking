@@ -8,12 +8,14 @@ class FeatureItem extends StatelessWidget {
   const FeatureItem({
     Key? key,
     required this.data,
+    required this.roomTypeName, // This is the room type name (e.g., "Standard", "Deluxe")
     this.width = 280,
     this.height = 300,
     this.onTap,
     this.onTapFavorite,
   }) : super(key: key);
 
+  final String roomTypeName; // The human-readable room type name
   final Room data;
   final double width;
   final double height;
@@ -27,8 +29,8 @@ class FeatureItem extends StatelessWidget {
       child: Container(
         width: width,
         height: height,
-        padding: EdgeInsets.all(10),
-        margin: EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.symmetric(vertical: 5),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
@@ -37,7 +39,7 @@ class FeatureItem extends StatelessWidget {
               color: AppColor.shadowColor.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 1,
-              offset: Offset(1, 1), // changes position of shadow
+              offset: const Offset(1, 1), // changes position of shadow
             ),
           ],
         ),
@@ -47,13 +49,15 @@ class FeatureItem extends StatelessWidget {
             _buildImage(data),
             Container(
               width: width - 20,
-              padding: EdgeInsets.fromLTRB(5, 10, 5, 0),
+              padding: const EdgeInsets.fromLTRB(5, 10, 5, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildName(data),
-                  SizedBox(height: 5),
-                  _buildInfo(data),
+                  const SizedBox(height: 5),
+                  _buildInfo(
+                    data,
+                  ), // This method is updated to show type name and location
                 ],
               ),
             ),
@@ -68,7 +72,7 @@ class FeatureItem extends StatelessWidget {
       data.name,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: TextStyle(
+      style: const TextStyle(
         fontSize: 18,
         color: AppColor.textColor,
         fontWeight: FontWeight.w600,
@@ -76,6 +80,7 @@ class FeatureItem extends StatelessWidget {
     );
   }
 
+  // Updated _buildInfo to display room type name and location on separate lines
   Widget _buildInfo(Room room) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -83,13 +88,38 @@ class FeatureItem extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              data.type,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: AppColor.labelColor, fontSize: 13),
+            // Room Type Name
+            Row(
+              children: [
+                Icon(
+                  Icons.category_outlined, // Using a category icon for type
+                  color: AppColor.labelColor,
+                  size: 13,
+                ),
+                const SizedBox(width: 2),
+                Text(
+                  roomTypeName, // Display the human-readable room type name
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColor.labelColor, fontSize: 13),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 3), // Small vertical space between lines
+            // Room Location
+            Row(
+              children: [
+                Icon(Icons.place, color: AppColor.labelColor, size: 13),
+                const SizedBox(width: 2),
+                Text(
+                  data.location, // Display room location
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: AppColor.labelColor, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8), // Space before price
             Text(
               '\$${data.price}',
               maxLines: 1,

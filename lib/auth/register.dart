@@ -426,14 +426,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 ElevatedButton(
                   onPressed: _isLoading ? null : _registerUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        AppColor.primary, // Your primary button color
+                    backgroundColor: AppColor.cyan, // Your cyan button color
                     padding: const EdgeInsets.symmetric(vertical: 15),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
                     elevation: 5, // Added elevation
-                    shadowColor: AppColor.primary.withOpacity(
+                    shadowColor: AppColor.cyan.withOpacity(
                       0.4,
                     ), // Subtle shadow
                   ),
@@ -483,7 +482,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         "Login", // Changed from "Login /" for clarity
                         style: TextStyle(
                           color: AppColor
-                              .primary, // Consistent primary color for links
+                              .cyan, // Consistent primary color for links
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
