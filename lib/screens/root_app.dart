@@ -13,8 +13,7 @@ import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/screens/profile.dart';
 import 'package:hotel_booking/auth/register.dart';
 import 'package:hotel_booking/screens/search.dart';
-import 'package:hotel_booking/screens/sidebar_screen/room/room_screen.dart';
-import 'package:hotel_booking/screens/sidebar_screen/buyers_screen.dart';
+import 'package:hotel_booking/screens/sidebar_screen/user_management.dart';
 import 'package:hotel_booking/screens/sidebar_screen/categories_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/orders_screen.dart';
 import 'package:hotel_booking/screens/sidebar_screen/products_screen.dart';
@@ -112,12 +111,12 @@ class _RootAppState extends State<RootApp> {
         case OrdersScreen.id:
           _selectedScreen = const OrdersScreen();
           break;
-        case BuyersScreen.id:
-          _selectedScreen = const BuyersScreen();
+        case UserManagement.id:
+          _selectedScreen = const UserManagement();
           break;
-        case VendorsScreen.id:
-          _selectedScreen = const VendorsScreen();
-          break;
+        // case VendorsScreen.id:
+        //   _selectedScreen = const VendorsScreen();
+        //   break;
         case '/search':
           _selectedScreen = const SearchPage();
           break;
@@ -313,14 +312,14 @@ class _RootAppState extends State<RootApp> {
                 ),
                 AdminMenuItem(
                   title: 'Users Management',
-                  route: BuyersScreen.id,
+                  route: UserManagement.id,
                   icon: Icons.person_outline,
                 ),
-                AdminMenuItem(
-                  title: 'Vendors',
-                  route: VendorsScreen.id,
-                  icon: Icons.store_outlined,
-                ),
+                // AdminMenuItem(
+                //   title: 'Vendors',
+                //   route: VendorsScreen.id,
+                //   icon: Icons.store_outlined,
+                // ),
                 AdminMenuItem(
                   title: 'Logout',
                   route: 'logout',
@@ -333,6 +332,12 @@ class _RootAppState extends State<RootApp> {
                   route: HomePage.id,
                   icon: Icons.home_outlined,
                 ),
+                AdminMenuItem(
+                  title: 'Orders',
+                  route: OrdersScreen.id,
+                  icon: Icons.shopping_cart_outlined,
+                ),
+
                 AdminMenuItem(
                   title: 'Search',
                   route: '/search',

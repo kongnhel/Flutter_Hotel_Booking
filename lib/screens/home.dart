@@ -101,8 +101,8 @@ class _HomePageState extends State<HomePage> {
           const SizedBox(height: 10),
           _sectionTitle("All Rooms"),
           _buildFeatured(),
-          const SizedBox(height: 15),
-          _sectionTitle("Recommended", seeAll: true),
+          // const SizedBox(height: 15),
+          // _sectionTitle("Recommended", seeAll: true),
         ],
       ),
     );

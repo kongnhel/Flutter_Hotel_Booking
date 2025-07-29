@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/screens/home.dart'; // Import HomePage
-import 'package:hotel_booking/screens/root_app.dart'; // Import RootApp
+import 'package:http/http.dart' as http;
+import 'package:hotel_booking/screens/root_app.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ Add this import
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, dynamic> roomData;
@@ -12,37 +14,221 @@ class CheckoutPage extends StatefulWidget {
 }
 
 class _CheckoutPageState extends State<CheckoutPage> {
-  // Dummy payment methods
   final List<String> _paymentMethods = [
-    'Credit Card',
     'PayPal',
-    'Bank Transfer',
+    'ការផ្ទេរប្រាក់តាមធនាគារ', // Bank Transfer
   ];
   String? _selectedPaymentMethod;
 
-  // Dummy form controllers for demonstration
-  final TextEditingController _cardNumberController = TextEditingController();
-  final TextEditingController _expiryDateController = TextEditingController();
-  final TextEditingController _cvvController = TextEditingController();
-  final TextEditingController _cardHolderNameController =
-      TextEditingController();
+  DateTime _checkInDate = DateTime.now();
+  DateTime _checkOutDate = DateTime.now().add(const Duration(days: 1));
+
+  final TextEditingController _guestsController = TextEditingController(
+    text: '2',
+  ); // Default to 2 guests
+
+  // ✅ Add a variable to store the current user's email
+  String _currentUserEmail = '';
 
   @override
   void initState() {
     super.initState();
-    // Set a default payment method
-    if (_paymentMethods.isNotEmpty) {
-      _selectedPaymentMethod = _paymentMethods[0];
+    _selectedPaymentMethod = _paymentMethods.first; // កំណត់វិធីទូទាត់ដំបូង
+    _loadUserEmail(); // ✅ Call to load user email when the page initializes
+  }
+
+  // ✅ Function to load the user's email from SharedPreferences
+  Future<void> _loadUserEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _currentUserEmail =
+          prefs.getString('userId') ??
+          ''; // 'userId' is where we stored the email from LoginPage
+    });
+    if (_currentUserEmail.isEmpty) {
+      _showSnackBar(
+        "មិនមានព័ត៌មាន Email របស់អ្នកប្រើប្រាស់ទេ។ សូមព្យាយាម Login ឡើងវិញ។",
+        isError: true,
+      );
     }
   }
 
   @override
   void dispose() {
-    _cardNumberController.dispose();
-    _expiryDateController.dispose();
-    _cvvController.dispose();
-    _cardHolderNameController.dispose();
+    _guestsController.dispose(); // Dispose guests controller
     super.dispose();
+  }
+
+  // Function to pick a date
+  Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: isCheckIn ? _checkInDate : _checkOutDate,
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2030),
+      helpText: isCheckIn
+          ? 'ជ្រើសរើសថ្ងៃចូល'
+          : 'ជ្រើសរើសថ្ងៃចេញ', // Select Check-in Date / Select Check-out Date
+      cancelText: 'បោះបង់', // Cancel
+      confirmText: 'បញ្ជាក់', // Confirm
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.deepPurple, // Header background color
+              onPrimary: Colors.white, // Header text color
+              onSurface: Colors.black, // Body text color
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.deepPurple, // Button text color
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      // Simple null check for picked date
+      setState(() {
+        if (isCheckIn) {
+          _checkInDate = picked;
+          if (_checkOutDate.isBefore(_checkInDate)) {
+            _checkOutDate = _checkInDate.add(const Duration(days: 1));
+          }
+        } else {
+          _checkOutDate = picked;
+          if (_checkInDate.isAfter(_checkOutDate)) {
+            _checkInDate = _checkOutDate.subtract(const Duration(days: 1));
+          }
+        }
+      });
+    }
+  }
+
+  // Helper function for showing snack bars
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+      ),
+    );
+  }
+
+  Future<void> _createOrder(BuildContext context) async {
+    // --- Basic Client-Side Validation ---
+    if (_selectedPaymentMethod == null || _selectedPaymentMethod!.isEmpty) {
+      _showSnackBar(
+        "សូមជ្រើសរើសវិធីសាស្រ្តទូទាត់។",
+        isError: true,
+      ); // Please select a payment method.
+      return;
+    }
+
+    if (_checkInDate.isAfter(_checkOutDate)) {
+      _showSnackBar(
+        "ថ្ងៃចេញត្រូវតែធំជាងថ្ងៃចូល។",
+        isError: true,
+      ); // Check-out date must be after check-in date.
+      return;
+    }
+
+    // Parse guests
+    final int? guests = int.tryParse(_guestsController.text);
+    if (guests == null || guests <= 0) {
+      _showSnackBar(
+        "សូមបញ្ចូលចំនួនភ្ញៀវត្រឹមត្រូវ។",
+        isError: true,
+      ); // Please enter a valid number of guests.
+      return;
+    }
+
+    // ✅ Validate if user email is available
+    if (_currentUserEmail.isEmpty) {
+      _showSnackBar(
+        "មិនមានព័ត៌មាន Email របស់អ្នកប្រើប្រាស់ទេ។ សូមព្យាយាម Login ឡើងវិញ។",
+        isError: true,
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: 20),
+            Text("កំពុងដំណើរការទូទាត់..."), // Processing Payment...
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final response = await http.post(
+        Uri.parse("http://localhost:3000/api/orders"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "roomId": widget.roomData["id"],
+          "roomName": widget.roomData["name"],
+          "roomTypeId": widget.roomData["roomTypeId"] ?? "",
+          "checkInDate": _checkInDate.toIso8601String().split('T').first,
+          "checkOutDate": _checkOutDate.toIso8601String().split('T').first,
+          "guests": guests,
+          "totalPrice": _getPriceAsDouble(),
+          "paymentMethod": _selectedPaymentMethod,
+          "status": "pending",
+          // ✅ Use the dynamically loaded user email here
+          "userId": _currentUserEmail,
+        }),
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (response.statusCode == 201) {
+        _showSnackBar(
+          "ការទូទាត់បានជោគជ័យ! ការបញ្ជាទិញត្រូវបានបង្កើត។",
+          isError: false,
+        );
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const RootApp()),
+          (route) => false,
+        );
+      } else {
+        print(
+          "API Error Response: ${response.statusCode} - ${response.body}",
+        ); // Log the full response
+        _showSnackBar("បរាជ័យ: ${response.body}", isError: true);
+      }
+    } catch (e) {
+      Navigator.of(context, rootNavigator: true).pop();
+      print("Network Error: $e"); // Log network errors
+      _showSnackBar("មានបញ្ហា: $e", isError: true);
+    }
+  }
+
+  // Helper to safely convert price to double for formatting
+  double _getPriceAsDouble() {
+    final price = widget.roomData['price'];
+    if (price is num) {
+      return price.toDouble();
+    } else if (price is String) {
+      try {
+        return double.parse(price);
+      } catch (e) {
+        print("Error parsing price string: $e");
+        return 0.0;
+      }
+    }
+    return 0.0;
   }
 
   @override
@@ -50,190 +236,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text(
-          'Checkout',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.blueGrey[800],
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            Navigator.of(context).pop(); // Go back to OrderPage
-          },
-        ),
+          "ការទូទាត់",
+          style: TextStyle(color: Colors.white),
+        ), // Checkout
+        backgroundColor: Colors.deepPurple,
+        leading: const BackButton(color: Colors.white),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Room Summary Card
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Booking Summary',
-                      style: textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildSummaryRow('Room:', widget.roomData['name'] ?? 'N/A'),
-                    _buildSummaryRow('Type:', widget.roomData['type'] ?? 'N/A'),
-                    _buildSummaryRow(
-                      'Price:',
-                      widget.roomData['price'] ?? 'N/A',
-                    ),
-                    // Add more summary details like dates, guests, rooms if available
-                    // For this example, we'll use placeholder values
-                    _buildSummaryRow('Check-in:', '20/07/24'),
-                    _buildSummaryRow('Check-out:', '25/07/24'),
-                    _buildSummaryRow('Guests:', '2'),
-                    _buildSummaryRow('Rooms:', '1'),
-                    const Divider(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Total:',
-                          style: textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          widget.roomData['price'] ??
-                              'N/A', // Using room price as total for simplicity
-                          style: textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Payment Method Selection
-            Text(
-              'Payment Method',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    isExpanded: true,
-                    value: _selectedPaymentMethod,
-                    icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                    hint: const Text('Select Payment Method'),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedPaymentMethod = newValue;
-                      });
-                    },
-                    items: _paymentMethods.map<DropdownMenuItem<String>>((
-                      method,
-                    ) {
-                      return DropdownMenuItem<String>(
-                        value: method,
-                        child: Text(method),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Credit Card Details (Conditional based on selected method)
-            if (_selectedPaymentMethod == 'Credit Card') ...[
-              Text(
-                'Card Details',
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      _buildTextField(
-                        _cardNumberController,
-                        'Card Number',
-                        Icons.credit_card,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              _expiryDateController,
-                              'Expiry Date (MM/YY)',
-                              Icons.calendar_today,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildTextField(
-                              _cvvController,
-                              'CVV',
-                              Icons.lock,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildTextField(
-                        _cardHolderNameController,
-                        'Cardholder Name',
-                        Icons.person,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-
-            // Pay Now Button
+            _buildBookingSummary(textTheme),
+            const SizedBox(height: 20),
+            _buildDateSelection(textTheme),
+            const SizedBox(height: 20),
+            _buildGuestsInput(textTheme), // New guests input widget
+            const SizedBox(height: 20),
+            _buildPaymentMethod(textTheme),
+            const SizedBox(height: 20),
+            const SizedBox(height: 30),
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () {
-                  // Simulate payment processing
-                  _processPayment(context, widget.roomData);
-                },
+                onPressed: () => _createOrder(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
+                  backgroundColor: Colors.deepPurple,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -241,10 +272,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   elevation: 5,
                 ),
                 child: Text(
-                  'Pay Now ${widget.roomData['price'] ?? ''}',
-                  style: textTheme.titleMedium?.copyWith(
+                  "ទូទាត់ឥឡូវនេះ ${_getPriceAsDouble().toStringAsFixed(2)}\$", // Pay Now
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
                 ),
               ),
@@ -255,95 +287,203 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildBookingSummary(TextTheme textTheme) => Card(
+    elevation: 6,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 16, color: Colors.grey[700])),
           Text(
-            value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            "សេចក្តីសង្ខេបការកក់", // Booking Summary
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+          const Divider(height: 25, thickness: 1),
+          _summaryRow("បន្ទប់:", widget.roomData['name'] ?? 'N/A'), // Room:
+          _summaryRow("ប្រភេទ:", widget.roomData['type'] ?? 'N/A'), // Type:
+          _summaryRow(
+            "តម្លៃ:",
+            "${_getPriceAsDouble().toStringAsFixed(2)}\$",
+          ), // Price:
+        ],
+      ),
+    ),
+  );
+
+  Widget _summaryRow(String label, String value) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 6),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 16)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ],
+    ),
+  );
+
+  Widget _buildDateSelection(TextTheme textTheme) => Card(
+    elevation: 6,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "កាលបរិច្ឆេទស្នាក់នៅ", // Stay Dates
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+          const Divider(height: 25, thickness: 1),
+          _buildDateRow(
+            "ថ្ងៃចូល:", // Check-in Date:
+            _checkInDate,
+            () => _selectDate(context, true),
+          ),
+          const SizedBox(height: 10),
+          _buildDateRow(
+            "ថ្ងៃចេញ:", // Check-out Date:
+            _checkOutDate,
+            () => _selectDate(context, false),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 
-  Widget _buildTextField(
-    TextEditingController controller,
-    String label,
-    IconData icon,
-  ) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide.none,
-        ),
-        filled: true,
-        fillColor: Colors.grey[100],
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 12,
-          horizontal: 16,
+  Widget _buildDateRow(String label, DateTime date, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.grey, fontSize: 16),
+            ),
+            Row(
+              children: [
+                Text(
+                  "${date.day}/${date.month}/${date.year}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.calendar_today,
+                  color: Colors.deepPurple,
+                  size: 20,
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _processPayment(BuildContext context, Map<String, dynamic> room) {
-    // Show a loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext dialogContext) {
-        return const AlertDialog(
-          content: Row(
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 20),
-              Text("Processing Payment..."),
-            ],
+  Widget _buildGuestsInput(TextTheme textTheme) => Card(
+    elevation: 6,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "ចំនួនភ្ញៀវ", // Number of Guests
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
           ),
-        );
-      },
-    );
+          const Divider(height: 25, thickness: 1),
+          _textField(
+            _guestsController,
+            "ចំនួនភ្ញៀវ", // Number of Guests
+            Icons.people,
+            keyboardType: TextInputType.number,
+          ),
+        ],
+      ),
+    ),
+  );
 
-    // Simulate network delay
-    Future.delayed(const Duration(seconds: 2), () {
-      // Check if the widget is still mounted before performing UI operations
-      if (!mounted) {
-        // If the widget is no longer in the tree, do not attempt to update UI
-        return;
-      }
+  Widget _buildPaymentMethod(TextTheme textTheme) => Card(
+    elevation: 6,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "វិធីសាស្រ្តទូទាត់", // Payment Method
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple,
+            ),
+          ),
+          const Divider(height: 25, thickness: 1),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedPaymentMethod,
+              isExpanded: true,
+              icon: const Icon(
+                Icons.arrow_drop_down_circle,
+                color: Colors.deepPurple,
+              ),
+              items: _paymentMethods
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e,
+                      child: Text(e, style: const TextStyle(fontSize: 16)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedPaymentMethod = v),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
-      // Dismiss the loading dialog using its specific context
-      Navigator.of(
-        context,
-        rootNavigator: true,
-      ).pop(); // Use rootNavigator to ensure dialog is popped
-
-      // Show a SnackBar for payment success
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Payment successful for ${room['name']}!'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-
-      // Navigate to the RootApp and remove all previous routes
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const RootApp(), // Navigate to RootApp
-        ),
-        (Route<dynamic> route) => false, // Remove all previous routes
-      );
-    });
-  }
+  Widget _textField(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    TextInputType keyboardType = TextInputType.text,
+  }) => TextField(
+    controller: controller,
+    keyboardType: keyboardType,
+    decoration: InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: Colors.deepPurple),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.grey, width: 1.0),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Colors.deepPurple, width: 2.0),
+      ),
+      filled: true,
+      fillColor: Colors.grey[50],
+    ),
+  );
 }

@@ -9,7 +9,7 @@ class SearchResultsPage extends StatelessWidget {
   const SearchResultsPage({
     super.key,
     required this.searchParameters,
-    required this.searchResults,
+    required this.searchResults, required Map<String, String> roomTypeNames,
   });
 
   @override

@@ -1,23 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/screens/check_out.dart';
+import 'package:hotel_booking/screens/check_out.dart'; // This should be CheckoutPage
 import 'package:hotel_booking/auth/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// A page to display detailed information about a room and allow users to book it.
 class OrderViewPage extends StatelessWidget {
-  /// The data for the room to be displayed.
   final Map<String, dynamic> roomData;
+  final String roomTypeName;
 
-  /// The human-readable name of the room type.
-  final String roomTypeName; // Add this new field
-
-  /// Creates an [OrderViewPage].
-  /// The [roomData] is required and contains all the details of the room.
-  /// The [roomTypeName] is required to display the friendly name of the room type.
   const OrderViewPage({
     super.key,
     required this.roomData,
-    required this.roomTypeName, // Make it required in the constructor
+    required this.roomTypeName,
   });
 
   @override
@@ -27,7 +20,7 @@ class OrderViewPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          roomData['name'] ?? 'Room Details',
+          roomData['name'] ?? 'Room Details', // ព័ត៌មានលម្អិតបន្ទប់
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -80,7 +73,7 @@ class OrderViewPage extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Image Failed to Load',
+                              'Image Failed to Load', // រូបភាព Load មិនបាន
                               style: TextStyle(color: Colors.grey[600]),
                             ),
                           ],
@@ -109,18 +102,17 @@ class OrderViewPage extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      // Use the roomTypeName directly here
                       _buildDetailRow(
                         icon: Icons.category_outlined,
-                        label: "Type:",
-                        value: roomTypeName, // Use the passed roomTypeName
+                        label: "ប្រភេទ:", // Type:
+                        value: roomTypeName,
                         style: textTheme.bodyLarge,
                         iconColor: Colors.grey[600],
                       ),
                       const SizedBox(height: 5),
                       _buildDetailRow(
                         icon: Icons.location_on_outlined,
-                        label: "Location:",
+                        label: "ទីតាំង:", // Location:
                         value: roomData['location'] ?? 'N/A',
                         style: textTheme.bodyLarge,
                         iconColor: Colors.grey[600],
@@ -128,7 +120,7 @@ class OrderViewPage extends StatelessWidget {
                       const SizedBox(height: 5),
                       _buildDetailRow(
                         icon: Icons.star_rate_rounded,
-                        label: "Rate:",
+                        label: "អត្រា:", // Rate:
                         value: "${roomData['rate'] ?? 'N/A'}",
                         style: textTheme.bodyLarge,
                         iconColor: Colors.amber,
@@ -136,7 +128,7 @@ class OrderViewPage extends StatelessWidget {
                       const SizedBox(height: 5),
                       _buildDetailRow(
                         icon: Icons.attach_money,
-                        label: "Price:",
+                        label: "តម្លៃ:", // Price:
                         value: "${roomData['price'] ?? 'N/A'}",
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
@@ -146,7 +138,7 @@ class OrderViewPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 15),
                       Text(
-                        "Description:",
+                        "ការពិពណ៌នា:", // Description:
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: Colors.blueGrey[800],
@@ -154,7 +146,8 @@ class OrderViewPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 5),
                       Text(
-                        roomData['description'] ?? 'No description available.',
+                        roomData['description'] ??
+                            'No description available.', // មិនមានការពិពណ៌នា
                         style: textTheme.bodyMedium,
                       ),
                     ],
@@ -174,7 +167,7 @@ class OrderViewPage extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    "Confirm Booking",
+                    "បញ្ជាក់ការកក់", // Confirm Booking
                     style: textTheme.titleMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -205,31 +198,35 @@ class OrderViewPage extends StatelessWidget {
 
   void _confirmBooking(BuildContext context, Map<String, dynamic> room) async {
     final prefs = await SharedPreferences.getInstance();
-    final email = prefs.getString('email');
+    // ✅ Change 'email' to 'userId' as that's what we're storing for the user's email
+    final String? userEmail = prefs.getString('userId');
 
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text("Confirm Your Booking"),
+          title: const Text("បញ្ជាក់ការកក់របស់អ្នក"), // Confirm Your Booking
           content: Text(
-            "Are you sure you want to book ${room['name']} for ${room['price']}?",
+            "តើអ្នកប្រាកដជាចង់កក់ ${room['name']} ក្នុងតម្លៃ ${room['price']} ទេ?", // Are you sure you want to book ${room['name']} for ${room['price']}?
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text("Cancel"),
+              child: const Text("បោះបង់"), // Cancel
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
 
-                if (email == null) {
+                // ✅ Check userEmail instead of just 'email'
+                if (userEmail == null || userEmail.isEmpty) {
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
-                      title: const Text('Login Required'),
-                      content: const Text('Please login to continue.'),
+                      title: const Text('តម្រូវឱ្យ Login'), // Login Required
+                      content: const Text(
+                        'សូម Login ដើម្បីបន្ត។',
+                      ), // Please login to continue.
                       actions: [
                         TextButton(
                           onPressed: () {
@@ -241,7 +238,7 @@ class OrderViewPage extends StatelessWidget {
                               ),
                             );
                           },
-                          child: const Text('OK'),
+                          child: const Text('យល់ព្រម'), // OK
                         ),
                       ],
                     ),
@@ -256,7 +253,7 @@ class OrderViewPage extends StatelessWidget {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: const Text("Confirm"),
+              child: const Text("បញ្ជាក់"), // Confirm
             ),
           ],
         );

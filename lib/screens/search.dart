@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // No longer explicitly used for SystemChrome
+import 'package:hotel_booking/models/roomType_model.dart';
 import 'package:http/http.dart' as http;
 import 'package:hotel_booking/models/room_model.dart';
 import 'package:hotel_booking/screens/search_result_page.dart';
@@ -17,13 +19,15 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   List<Room> allRooms = [];
-  List<Room> filteredRooms = [];
+  // filteredRooms is not directly used in this class for display,
+  // but rather for the search results page.
+  // List<Room> filteredRooms = []; // Can remove this if not used for local display
 
   final TextEditingController _checkInController = TextEditingController();
   final TextEditingController _checkOutController = TextEditingController();
 
-  String? _selectedCity;
-  String? _selectedCategory;
+  String? _selectedCity; // Holds the city name
+  String? _selectedCategory; // Holds the roomType ID
   int _guests = 1;
   int _rooms = 1;
 
@@ -34,17 +38,42 @@ class _SearchPageState extends State<SearchPage> {
     {'name': 'Battambang'},
   ];
 
-  final List<Map<String, String>> categories = [
-    {'name': 'Luxury'},
-    {'name': 'Standard'},
-    {'name': 'Family'},
-    {'name': 'Suite'},
-  ];
+  Map<String, String> roomTypeNames =
+      {}; // key: roomTypeId, value: roomTypeName
 
   @override
   void initState() {
     super.initState();
     fetchRooms();
+    fetchRoomTypes();
+  }
+
+  @override
+  void dispose() {
+    _checkInController.dispose();
+    _checkOutController.dispose();
+    super.dispose();
+  }
+
+  Future<void> fetchRoomTypes() async {
+    try {
+      final response = await http.get(Uri.parse('$kBaseUrl/room_types'));
+      if (response.statusCode == 200) {
+        final List data = jsonDecode(response.body);
+        List<RoomType> types = data.map((e) => RoomType.fromJson(e)).toList();
+        setState(() {
+          roomTypeNames = {for (var type in types) type.id: type.name};
+          // Set a default selected category if none is selected and types are available
+          if (_selectedCategory == null && roomTypeNames.isNotEmpty) {
+            _selectedCategory = roomTypeNames.keys.first;
+          }
+        });
+      } else {
+        debugPrint("Failed to load room types, status: ${response.statusCode}");
+      }
+    } catch (e) {
+      debugPrint('Error fetching room types: $e');
+    }
   }
 
   Future<void> fetchRooms() async {
@@ -54,7 +83,7 @@ class _SearchPageState extends State<SearchPage> {
         final List jsonData = jsonDecode(res.body);
         setState(() {
           allRooms = jsonData.map((e) => Room.fromJson(e)).toList();
-          filteredRooms = allRooms;
+          // filteredRooms = allRooms; // No longer needed for local display
         });
       } else {
         debugPrint("Failed to load rooms: ${res.statusCode}");
@@ -66,18 +95,23 @@ class _SearchPageState extends State<SearchPage> {
 
   void _handleSearch() {
     final cityQuery = _selectedCity ?? '';
-    final categoryQuery = _selectedCategory ?? '';
+    final categoryIdQuery = _selectedCategory ?? ''; // This is the ID
 
     final results = allRooms.where((room) {
       final matchLocation = room.location.toLowerCase().contains(
         cityQuery.toLowerCase(),
       );
+      // Match by roomTypeId (the ID from the dropdown)
       final matchCategory = room.roomTypeId.toLowerCase().contains(
-        categoryQuery.toLowerCase(),
+        categoryIdQuery.toLowerCase(),
       );
 
       return matchLocation && matchCategory;
     }).toList();
+
+    // Get the display name for the category
+    final String categoryDisplayName =
+        roomTypeNames[categoryIdQuery] ?? 'Any Category';
 
     final searchParams = {
       'location': cityQuery.isNotEmpty ? cityQuery : 'Anywhere',
@@ -89,7 +123,7 @@ class _SearchPageState extends State<SearchPage> {
           : 'Any Date',
       'guests': _guests,
       'rooms': _rooms,
-      'category': categoryQuery.isNotEmpty ? categoryQuery : 'Any Category',
+      'category': categoryDisplayName, // Pass the display name
     };
 
     Navigator.push(
@@ -98,6 +132,7 @@ class _SearchPageState extends State<SearchPage> {
         builder: (context) => SearchResultsPage(
           searchParameters: searchParams,
           searchResults: results,
+          roomTypeNames: roomTypeNames, // Pass the map for results page to use
         ),
       ),
     );
@@ -188,7 +223,7 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _buildDropdown(
+                    _buildCityDropdown(
                       _selectedCity,
                       cities,
                       (val) => setState(() => _selectedCity = val),
@@ -209,9 +244,9 @@ class _SearchPageState extends State<SearchPage> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    _buildDropdown(
+                    _buildCategoryDropdown(
                       _selectedCategory,
-                      categories,
+                      roomTypeNames,
                       (val) => setState(() => _selectedCategory = val),
                     ),
 
@@ -247,7 +282,8 @@ class _SearchPageState extends State<SearchPage> {
     );
   }
 
-  Widget _buildDropdown(
+  // Generic dropdown for simple lists like cities
+  Widget _buildCityDropdown(
     String? value,
     List<Map<String, String>> list,
     Function(String?) onChanged,
@@ -267,8 +303,38 @@ class _SearchPageState extends State<SearchPage> {
           onChanged: onChanged,
           items: list.map((item) {
             return DropdownMenuItem<String>(
-              value: item['name'],
+              value: item['name'], // Value is the city name
               child: Text(item['name'] ?? ''),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  // Specific dropdown for room categories (using ID as value, name as display)
+  Widget _buildCategoryDropdown(
+    String? value, // This value will be the roomType ID
+    Map<String, String> roomTypesMap, // Map of ID to Name
+    Function(String?) onChanged, // Callback receives the selected ID
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: value,
+          icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+          onChanged: onChanged,
+          items: roomTypesMap.entries.map((entry) {
+            return DropdownMenuItem<String>(
+              value: entry.key, // Value is the roomType ID
+              child: Text(entry.value), // Display is the roomType Name
             );
           }).toList(),
         ),
