@@ -142,7 +142,9 @@ class _RegisterPageState extends State<RegisterPage> {
           // 5. Show success message and navigate
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Registered successfully! You can now log in."),
+              content: Text(
+                "បានចុះឈ្មោះដោយជោគជ័យ! ឥឡូវនេះអ្នកអាចចូលបានហើយ។",
+              ), // Registered successfully! You can now log in.
               backgroundColor: Colors.green,
             ),
           );
@@ -155,20 +157,22 @@ class _RegisterPageState extends State<RegisterPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                "Registration failed: ${resBody['error'] ?? 'Unknown error'}",
+                "ការចុះឈ្មោះបរាជ័យ: ${resBody['error'] ?? 'កំហុសមិនស្គាល់'}", // Registration failed: Unknown error
               ),
               backgroundColor: Colors.red,
             ),
           );
         }
       } on FirebaseAuthException catch (e) {
-        String message = "Registration failed.";
+        String message = "ការចុះឈ្មោះបរាជ័យ។"; // Registration failed.
         if (e.code == 'email-already-in-use') {
-          message = "This email is already in use.";
+          message =
+              "អ៊ីមែលនេះត្រូវបានប្រើប្រាស់រួចហើយ។"; // This email is already in use.
         } else if (e.code == 'weak-password') {
-          message = "Password is too weak. Please choose a stronger one.";
+          message =
+              "ពាក្យសម្ងាត់ខ្សោយពេក។ សូមជ្រើសរើសពាក្យសម្ងាត់ដែលខ្លាំងជាងនេះ។"; // Password is too weak. Please choose a stronger one.
         } else {
-          message = "Firebase Auth Error: ${e.message}";
+          message = "កំហុស Firebase Auth: ${e.message}"; // Firebase Auth Error:
         }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -178,7 +182,9 @@ class _RegisterPageState extends State<RegisterPage> {
         // General errors (e.g., network issues, JSON decoding errors)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("An unexpected error occurred: $e"),
+            content: Text(
+              "មានកំហុសដែលមិនបានរំពឹងទុក: $e",
+            ), // An unexpected error occurred:
             backgroundColor: Colors.red,
           ),
         );
@@ -310,7 +316,7 @@ class _RegisterPageState extends State<RegisterPage> {
         backgroundColor: AppColor.appBarColor,
         elevation: 0,
         title: Text(
-          "Register",
+          "ចុះឈ្មោះ", // Register
           style: TextStyle(color: AppColor.textColor, fontSize: 18),
         ),
       ),
@@ -323,7 +329,7 @@ class _RegisterPageState extends State<RegisterPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  "Create Your Account",
+                  "បង្កើតគណនីរបស់អ្នក", // Create Your Account
                   style: TextStyle(
                     color: AppColor.textColor,
                     fontSize: 28,
@@ -335,12 +341,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 _buildTextFormField(
                   controller: _firstNameController,
-                  labelText: "First Name",
-                  hintText: "Enter your first name",
+                  labelText: "នាមខ្លួន", // First Name
+                  hintText: "បញ្ចូលនាមខ្លួនរបស់អ្នក", // Enter your first name
                   icon: Icons.person_outline,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your first name';
+                      return 'សូមបញ្ចូលនាមខ្លួនរបស់អ្នក'; // Please enter your first name
                     }
                     return null;
                   },
@@ -349,12 +355,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 _buildTextFormField(
                   controller: _lastNameController,
-                  labelText: "Last Name",
-                  hintText: "Enter your last name",
+                  labelText: "នាមត្រកូល", // Last Name
+                  hintText: "បញ្ចូលនាមត្រកូលរបស់អ្នក", // Enter your last name
                   icon: Icons.person_outline,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your last name';
+                      return 'សូមបញ្ចូលនាមត្រកូលរបស់អ្នក'; // Please enter your last name
                     }
                     return null;
                   },
@@ -363,16 +369,16 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 _buildTextFormField(
                   controller: _emailController,
-                  labelText: "Email",
-                  hintText: "Enter your email",
+                  labelText: "អ៊ីមែល", // Email
+                  hintText: "បញ្ចូលអ៊ីមែលរបស់អ្នក", // Enter your email
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return 'សូមបញ្ចូលអ៊ីមែលរបស់អ្នក'; // Please enter your email
                     }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return 'Please enter a valid email address';
+                      return 'សូមបញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ'; // Please enter a valid email address
                     }
                     return null;
                   },
@@ -381,8 +387,8 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 _buildPasswordFormField(
                   controller: _passwordController,
-                  labelText: "Password",
-                  hintText: "Enter your password",
+                  labelText: "ពាក្យសម្ងាត់", // Password
+                  hintText: "បញ្ចូលពាក្យសម្ងាត់របស់អ្នក", // Enter your password
                   isVisible: _isPasswordVisible,
                   toggleVisibility: () {
                     setState(() {
@@ -391,10 +397,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter a password';
+                      return 'សូមបញ្ចូលពាក្យសម្ងាត់'; // Please enter a password
                     }
                     if (value.length < 6) {
-                      return 'Password must be at least 6 characters long';
+                      return 'ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងហោចណាស់ ៦ តួអក្សរ'; // Password must be at least 6 characters long
                     }
                     return null;
                   },
@@ -403,8 +409,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 _buildPasswordFormField(
                   controller: _confirmPasswordController,
-                  labelText: "Confirm Password",
-                  hintText: "Re-enter your password",
+                  labelText: "បញ្ជាក់ពាក្យសម្ងាត់", // Confirm Password
+                  hintText:
+                      "បញ្ចូលពាក្យសម្ងាត់របស់អ្នកម្តងទៀត", // Re-enter your password
                   isVisible: _isConfirmPasswordVisible,
                   toggleVisibility: () {
                     setState(() {
@@ -413,10 +420,10 @@ class _RegisterPageState extends State<RegisterPage> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please confirm your password';
+                      return 'សូមបញ្ជាក់ពាក្យសម្ងាត់របស់អ្នក'; // Please confirm your password
                     }
                     if (value != _passwordController.text) {
-                      return 'Passwords do not match';
+                      return 'ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ'; // Passwords do not match
                     }
                     return null;
                   },
@@ -447,7 +454,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                         )
                       : Text(
-                          "Register",
+                          "ចុះឈ្មោះ", // Register
                           style: TextStyle(
                             color: Colors
                                 .white, // Changed to white for better contrast
@@ -462,7 +469,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Already have an account?",
+                      "មានគណនីរួចហើយ?", // Already have an account?
                       style: TextStyle(
                         color: AppColor.labelColor,
                         fontSize: 15,
@@ -479,7 +486,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         );
                       },
                       child: Text(
-                        "Login", // Changed from "Login /" for clarity
+                        "ចូល", // Login
                         style: TextStyle(
                           color: AppColor
                               .cyan, // Consistent primary color for links

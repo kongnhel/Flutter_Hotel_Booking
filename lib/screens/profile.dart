@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data'; // Keep this as it might be used for base64 encoding
-import 'package:cached_network_image/cached_network_image.dart'; // ADD THIS IMPORT
+import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // Keep kIsWeb
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/auth/login.dart';
 import 'package:hotel_booking/models/user_model.dart';
@@ -25,14 +25,13 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   UserModel? _currentUser;
   File? _profileImageFile;
-  String? _profileImageUrl; // Stores the Cloudinary URL or blob: URL for web
-  XFile? _pickedWebImage; // Stores the XFile for web picked image
+  String? _profileImageUrl;
+  XFile? _pickedWebImage;
 
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _emailController =
-      TextEditingController(); // Added for email display
+  final TextEditingController _emailController = TextEditingController();
 
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
@@ -48,70 +47,35 @@ class _ProfilePageState extends State<ProfilePage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose(); // Dispose email controller
+    _emailController.dispose();
     super.dispose();
   }
 
-  /// Loads the user session from SharedPreferences and updates the UI.
   Future<void> _loadUserSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final userJson = prefs.getString(
-        'user',
-      ); // THIS IS THE SOURCE OF YOUR LOCAL USER DATA
-
-      debugPrint('*** DEBUG: _loadUserSession started ***');
-      debugPrint('*** DEBUG: Raw user JSON from SharedPreferences: $userJson');
+      final userJson = prefs.getString('user');
 
       if (userJson != null) {
         final userMap = json.decode(userJson);
-
-        debugPrint('*** DEBUG: User Map after JSON decode: $userMap');
-
         setState(() {
-          _currentUser = UserModel.fromJson(
-            userMap,
-          ); // This parses the JSON into your UserModel
-
-          debugPrint(
-            '*** DEBUG: UserModel firstName loaded: ${_currentUser?.firstName}',
-          );
-          debugPrint(
-            '*** DEBUG: UserModel lastName loaded: ${_currentUser?.lastName}',
-          );
-          debugPrint(
-            '*** DEBUG: UserModel email loaded: ${_currentUser?.email}',
-          );
-          debugPrint(
-            '*** DEBUG: UserModel phone loaded: ${_currentUser?.phone}',
-          );
-          debugPrint(
-            '*** DEBUG: UserModel profileImage loaded: ${_currentUser?.profileImage}',
-          );
-
+          _currentUser = UserModel.fromJson(userMap);
           _firstNameController.text = _currentUser?.firstName ?? "";
           _lastNameController.text = _currentUser?.lastName ?? "";
           _phoneController.text = _currentUser?.phone ?? "";
           _emailController.text = _currentUser?.email ?? widget.email;
-          _profileImageUrl =
-              _currentUser?.profileImage; // Assign the profile image URL
+          _profileImageUrl = _currentUser?.profileImage;
         });
       } else {
-        debugPrint(
-          '*** DEBUG: No user JSON found in SharedPreferences. Defaulting email. ***',
-        );
         setState(() {
           _emailController.text = widget.email;
         });
       }
-      debugPrint('*** DEBUG: _loadUserSession finished ***');
     } catch (e) {
-      _showSnackBar("Error loading user session: $e", isError: true);
-      debugPrint("Error decoding user session: $e");
+      _showSnackBar("កំហុសក្នុងការផ្ទុកវគ្គអ្នកប្រើប្រាស់: $e", isError: true);
     }
   }
 
-  /// Allows the user to pick an image from the gallery.
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -123,19 +87,16 @@ class _ProfilePageState extends State<ProfilePage> {
         if (kIsWeb) {
           _pickedWebImage = pickedFile;
           _profileImageFile = null;
-          // For web, pickedFile.path gives a 'blob:' URL which can be displayed directly
           _profileImageUrl = pickedFile.path;
         } else {
           _profileImageFile = File(pickedFile.path);
-          _profileImageUrl =
-              null; // Clear network URL when local file is picked
+          _profileImageUrl = null;
           _pickedWebImage = null;
         }
       });
     }
   }
 
-  /// Updates the user's profile, including phone number and profile image.
   Future<void> _updateProfile() async {
     if (_isLoading) return;
 
@@ -146,7 +107,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw Exception("No logged-in user found.");
+        throw Exception("រកមិនឃើញអ្នកប្រើប្រាស់ដែលបានចូលទេ។");
       }
 
       final token = await user.getIdToken();
@@ -154,11 +115,8 @@ class _ProfilePageState extends State<ProfilePage> {
         "firstName": _firstNameController.text.trim(),
         "lastName": _lastNameController.text.trim(),
         "phone": _phoneController.text.trim(),
-        // Email is usually updated separately due to re-authentication/verification
-        // "email": _emailController.text.trim(), // DO NOT send email here directly without proper Firebase update
       };
 
-      // Handle image upload based on platform and what was picked
       if (!kIsWeb && _profileImageFile != null) {
         final bytes = await _profileImageFile!.readAsBytes();
         requestBody["profileImage"] =
@@ -169,11 +127,8 @@ class _ProfilePageState extends State<ProfilePage> {
             "data:image/jpeg;base64,${base64Encode(bytes)}";
       } else if (_profileImageUrl != null &&
           _profileImageUrl!.startsWith('http')) {
-        // If profileImage was from Cloudinary and not changed, send it back
         requestBody["profileImage"] = _profileImageUrl;
       }
-      // If profileImage is null or empty, it won't be sent in the requestBody,
-      // which means the backend should handle it as no change or removal.
 
       final response = await http.put(
         Uri.parse("http://localhost:3000/api/users/updateProfile"),
@@ -187,40 +142,38 @@ class _ProfilePageState extends State<ProfilePage> {
       if (response.statusCode == 200) {
         final resBody = json.decode(response.body);
 
-        // Update Firebase User's displayName if you want it to reflect full name
-        // await user.updateDisplayName("${_firstNameController.text.trim()} ${_lastNameController.text.trim()}");
-
         if (_currentUser != null) {
-          // Update the local user model with potentially new profileImage URL from backend
           _currentUser = _currentUser!.copyWith(
             firstName: _firstNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
             phone: _phoneController.text.trim(),
-            // email: _emailController.text.trim(), // Only update local model after successful Firebase email update
             profileImage:
                 resBody['updatedFields']?['profileImage'] ??
-                _currentUser!
-                    .profileImage, // Get updated URL from response or retain old
+                _currentUser!.profileImage,
           );
 
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('user', json.encode(_currentUser!.toJson()));
 
           setState(() {
-            _profileImageUrl = _currentUser!.profileImage; // Update display URL
-            _profileImageFile =
-                null; // Clear local file after successful upload
-            _pickedWebImage =
-                null; // Clear web picked file after successful upload
+            _profileImageUrl = _currentUser!.profileImage;
+            _profileImageFile = null;
+            _pickedWebImage = null;
           });
 
-          _showSnackBar("Profile updated successfully!");
+          _showSnackBar("ប្រវត្តិរូបត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!");
         }
       } else {
-        _showSnackBar("Update failed: ${response.body}", isError: true);
+        _showSnackBar(
+          "ការធ្វើបច្ចុប្បន្នភាពបរាជ័យ: ${response.body}",
+          isError: true,
+        );
       }
     } catch (e) {
-      _showSnackBar("Error updating profile: $e", isError: true);
+      _showSnackBar(
+        "កំហុសក្នុងការធ្វើបច្ចុប្បន្នភាពប្រវត្តិរូប: $e",
+        isError: true,
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -228,7 +181,6 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /// Logs out the user from Firebase and clears local session data.
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('email');
@@ -243,7 +195,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Shows a Cupertino-style confirmation dialog for logging out.
   void _showConfirmLogout() {
     showCupertinoModalPopup<void>(
       context: context,
@@ -252,7 +203,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Theme(
           data: ThemeData.light(),
           child: CupertinoActionSheet(
-            message: const Text("Would you like to log out?"),
+            message: const Text("តើអ្នកចង់ចេញពីគណនីទេ?"),
             actions: [
               CupertinoActionSheetAction(
                 onPressed: () {
@@ -261,14 +212,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 },
                 isDestructiveAction: true,
                 child: Text(
-                  "Log Out",
+                  "ចេញពីគណនី",
                   style: TextStyle(color: AppColor.actionColor),
                 ),
               ),
             ],
             cancelButton: CupertinoActionSheetAction(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
+              child: const Text("បោះបង់"),
             ),
           ),
         ),
@@ -276,7 +227,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Displays a SnackBar message to the user.
   void _showSnackBar(String message, {bool isError = false}) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -288,17 +238,16 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  /// Handles changing the user's email address.
   Future<void> _showChangeEmailDialog() async {
     final TextEditingController _newEmailController = TextEditingController();
     final TextEditingController _currentPasswordController =
-        TextEditingController(); // For re-auth
+        TextEditingController();
     final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Change Email"),
+        title: const Text("ប្ដូរអ៊ីមែល"),
         content: Form(
           key: _formKey,
           child: Column(
@@ -307,20 +256,18 @@ class _ProfilePageState extends State<ProfilePage> {
               TextFormField(
                 controller: _newEmailController,
                 decoration: InputDecoration(
-                  labelText: "New Email",
-                  hintText: "Enter your new email",
+                  labelText: "អ៊ីមែលថ្មី",
+                  hintText: "បញ្ចូលអ៊ីមែលថ្មីរបស់អ្នក",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 keyboardType: TextInputType.emailAddress,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter new email';
-                  }
-                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                    return 'Enter a valid email';
-                  }
+                  if (value == null || value.isEmpty)
+                    return 'សូមបញ្ចូលអ៊ីមែលថ្មី';
+                  if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value))
+                    return 'បញ្ចូលអ៊ីមែលត្រឹមត្រូវ';
                   return null;
                 },
               ),
@@ -328,17 +275,16 @@ class _ProfilePageState extends State<ProfilePage> {
               TextFormField(
                 controller: _currentPasswordController,
                 decoration: InputDecoration(
-                  labelText: "Current Password",
-                  hintText: "Confirm with your current password",
+                  labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
+                  hintText: "បញ្ជាក់ជាមួយនឹងពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your current password';
-                  }
+                  if (value == null || value.isEmpty)
+                    return 'សូមបញ្ចូលពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក';
                   return null;
                 },
               ),
@@ -348,33 +294,26 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Cancel"),
+            child: const Text("បោះបង់"),
           ),
           ElevatedButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                Navigator.of(context).pop(); // Dismiss dialog
+                Navigator.of(context).pop();
                 setState(() => _isLoading = true);
                 try {
                   final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) {
-                    throw Exception("No logged-in user.");
-                  }
+                  if (user == null)
+                    throw Exception("រកមិនឃើញអ្នកប្រើប្រាស់ដែលបានចូលទេ។");
 
-                  // 1. Re-authenticate user
                   AuthCredential credential = EmailAuthProvider.credential(
                     email: user.email!,
                     password: _currentPasswordController.text,
                   );
                   await user.reauthenticateWithCredential(credential);
-
-                  // 2. Update email in Firebase Auth
                   await user.updateEmail(_newEmailController.text.trim());
-
-                  // 3. (Optional but recommended) Send email verification
                   await user.sendEmailVerification();
 
-                  // 4. Update email in your backend (if needed)
                   final token = await user.getIdToken();
                   await http.put(
                     Uri.parse("http://localhost:3000/api/users/updateProfile"),
@@ -387,13 +326,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     }),
                   );
 
-                  // 5. Update local user model and shared preferences
                   if (_currentUser != null) {
                     _currentUser = _currentUser!.copyWith(
                       email: _newEmailController.text.trim(),
-                      // firstName and lastName should not be set to empty here unless you explicitly want to clear them
-                      // firstName: '',
-                      // lastName: '',
                     );
                     final prefs = await SharedPreferences.getInstance();
                     await prefs.setString(
@@ -404,30 +339,28 @@ class _ProfilePageState extends State<ProfilePage> {
                       _emailController.text = _currentUser!.email;
                     });
                   }
-
                   _showSnackBar(
-                    "Email updated. Please check your new email for verification.",
+                    "អ៊ីមែលត្រូវបានធ្វើបច្ចុប្បន្នភាព។ សូមពិនិត្យអ៊ីមែលថ្មីរបស់អ្នកសម្រាប់ការផ្ទៀងផ្ទាត់។",
                   );
                 } on FirebaseAuthException catch (e) {
                   _showSnackBar(
-                    "Failed to change email: ${e.message}",
+                    "បរាជ័យក្នុងការប្ដូរអ៊ីមែល: ${e.message}",
                     isError: true,
                   );
                 } catch (e) {
-                  _showSnackBar("Error changing email: $e", isError: true);
+                  _showSnackBar("កំហុសក្នុងការប្ដូរអ៊ីមែល: $e", isError: true);
                 } finally {
                   setState(() => _isLoading = false);
                 }
               }
             },
-            child: const Text("Change"),
+            child: const Text("ប្ដូរ"),
           ),
         ],
       ),
     );
   }
 
-  /// Handles changing the user's password.
   Future<void> _showChangePasswordDialog() async {
     final TextEditingController _currentPasswordController =
         TextEditingController();
@@ -440,7 +373,7 @@ class _ProfilePageState extends State<ProfilePage> {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Change Password"),
+        title: const Text("ប្ដូរពាក្យសម្ងាត់"),
         content: Form(
           key: _formKey,
           child: Column(
@@ -449,16 +382,15 @@ class _ProfilePageState extends State<ProfilePage> {
               TextFormField(
                 controller: _currentPasswordController,
                 decoration: InputDecoration(
-                  labelText: "Current Password",
+                  labelText: "ពាក្យសម្ងាត់បច្ចុប្បន្ន",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your current password';
-                  }
+                  if (value == null || value.isEmpty)
+                    return 'សូមបញ្ចូលពាក្យសម្ងាត់បច្ចុប្បន្នរបស់អ្នក';
                   return null;
                 },
               ),
@@ -466,17 +398,16 @@ class _ProfilePageState extends State<ProfilePage> {
               TextFormField(
                 controller: _newPasswordController,
                 decoration: InputDecoration(
-                  labelText: "New Password",
+                  labelText: "ពាក្យសម្ងាត់ថ្មី",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  hintText: "Min 6 characters",
+                  hintText: "អក្សរយ៉ាងតិច ៦ តួ",
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty || value.length < 6) {
-                    return 'Password must be at least 6 characters long';
-                  }
+                  if (value == null || value.isEmpty || value.length < 6)
+                    return 'ពាក្យសម្ងាត់ត្រូវតែមានយ៉ាងតិច ៦ តួអក្សរ';
                   return null;
                 },
               ),
@@ -484,19 +415,17 @@ class _ProfilePageState extends State<ProfilePage> {
               TextFormField(
                 controller: _confirmNewPasswordController,
                 decoration: InputDecoration(
-                  labelText: "Confirm New Password",
+                  labelText: "បញ្ជាក់ពាក្យសម្ងាត់ថ្មី",
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 obscureText: true,
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please confirm your new password';
-                  }
-                  if (value != _newPasswordController.text) {
-                    return 'Passwords do not match';
-                  }
+                  if (value == null || value.isEmpty)
+                    return 'សូមបញ្ជាក់ពាក្យសម្ងាត់ថ្មីរបស់អ្នក';
+                  if (value != _newPasswordController.text)
+                    return 'ពាក្យសម្ងាត់មិនត្រូវគ្នាទេ';
                   return null;
                 },
               ),
@@ -506,57 +435,55 @@ class _ProfilePageState extends State<ProfilePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text("Cancel"),
+            child: const Text("បោះបង់"),
           ),
           ElevatedButton(
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                Navigator.of(context).pop(); // Dismiss dialog
+                Navigator.of(context).pop();
                 setState(() => _isLoading = true);
                 try {
                   final user = FirebaseAuth.instance.currentUser;
-                  if (user == null) {
-                    throw Exception("No logged-in user.");
-                  }
+                  if (user == null)
+                    throw Exception("រកមិនឃើញអ្នកប្រើប្រាស់ដែលបានចូលទេ។");
 
-                  // 1. Re-authenticate user
                   AuthCredential credential = EmailAuthProvider.credential(
                     email: user.email!,
                     password: _currentPasswordController.text,
                   );
                   await user.reauthenticateWithCredential(credential);
-
-                  // 2. Update password in Firebase Auth
                   await user.updatePassword(_newPasswordController.text);
-
-                  _showSnackBar("Password updated successfully!");
+                  _showSnackBar(
+                    "ពាក្យសម្ងាត់ត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!",
+                  );
                 } on FirebaseAuthException catch (e) {
                   _showSnackBar(
-                    "Failed to change password: ${e.message}",
+                    "បរាជ័យក្នុងការប្ដូរពាក្យសម្ងាត់: ${e.message}",
                     isError: true,
                   );
                 } catch (e) {
-                  _showSnackBar("Error changing password: $e", isError: true);
+                  _showSnackBar(
+                    "កំហុសក្នុងការប្ដូរពាក្យសម្ងាត់: $e",
+                    isError: true,
+                  );
                 } finally {
                   setState(() => _isLoading = false);
                 }
               }
             },
-            child: const Text("Change"),
+            child: const Text("ប្ដូរ"),
           ),
         ],
       ),
     );
   }
 
-  /// Builds the user's profile display, showing avatar or initial with an edit icon.
   Widget _buildProfileAvatar() {
     final displayImageFile = _profileImageFile;
     final displayImageUrl = _profileImageUrl;
 
     ImageProvider<Object>? imageProvider;
 
-    // Order of precedence for image display:
     if (displayImageFile != null && !kIsWeb) {
       imageProvider = FileImage(displayImageFile);
     } else if (kIsWeb &&
@@ -568,20 +495,14 @@ class _ProfilePageState extends State<ProfilePage> {
       imageProvider = CachedNetworkImageProvider(displayImageUrl);
     }
 
-    // Determine initials for fallback
     String initials = "";
-    if (_firstNameController.text.isNotEmpty) {
+    if (_firstNameController.text.isNotEmpty)
       initials += _firstNameController.text[0].toUpperCase();
-    }
-    if (_lastNameController.text.isNotEmpty) {
+    if (_lastNameController.text.isNotEmpty)
       initials += _lastNameController.text[0].toUpperCase();
-    }
-    if (initials.isEmpty && _emailController.text.isNotEmpty) {
+    if (initials.isEmpty && _emailController.text.isNotEmpty)
       initials = _emailController.text[0].toUpperCase();
-    }
-    if (initials.isEmpty) {
-      initials = "?";
-    }
+    if (initials.isEmpty) initials = "?";
 
     return Center(
       child: Stack(
@@ -598,7 +519,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ).withOpacity(0.3),
                   backgroundImage: imageProvider,
                   onBackgroundImageError: (exception, stackTrace) {
-                    debugPrint('Error loading image: $exception');
+                    debugPrint('កំហុសក្នុងការផ្ទុករូបភាព: $exception');
                     setState(() {
                       _profileImageUrl = null;
                       _profileImageFile = null;
@@ -614,7 +535,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     189,
                     27,
                   ).withOpacity(0.3),
-
                   child: Text(
                     initials,
                     style: const TextStyle(
@@ -633,7 +553,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: const Color.fromARGB(255, 15, 189, 27),
-
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 2),
                 ),
@@ -650,7 +569,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Builds the app bar with the "Profile" title and user role.
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
       backgroundColor: AppColor.appBarColor,
@@ -658,7 +576,7 @@ class _ProfilePageState extends State<ProfilePage> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            "Profile",
+            "ប្រវត្តិរូប",
             style: TextStyle(
               color: AppColor.textColor,
               fontSize: 24,
@@ -672,7 +590,9 @@ class _ProfilePageState extends State<ProfilePage> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              _currentUser?.role == 'admin' ? 'Admin' : 'User',
+              _currentUser?.role == 'admin'
+                  ? 'អ្នកគ្រប់គ្រង'
+                  : 'អ្នកប្រើប្រាស់',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 14,
@@ -685,7 +605,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  /// Builds a generic setting item with an icon, title, and optional tap handler.
   Widget _buildSettingItem({
     required String title,
     required IconData leadingIcon,
@@ -733,117 +652,30 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 20),
 
-            // First Name Field
-            TextField(
+            _buildTextField(
               controller: _firstNameController,
-              decoration: InputDecoration(
-                labelText: "First Name",
-                labelStyle: TextStyle(color: AppColor.labelColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColor.labelColor.withOpacity(0.5),
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColor.primary, width: 2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-              style: TextStyle(color: AppColor.textColor),
+              labelText: "ឈ្មោះដំបូង",
               keyboardType: TextInputType.name,
             ),
             const SizedBox(height: 15),
 
-            // Last Name Field
-            TextField(
+            _buildTextField(
               controller: _lastNameController,
-              decoration: InputDecoration(
-                labelText: "Last Name",
-                labelStyle: TextStyle(color: AppColor.labelColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColor.labelColor.withOpacity(0.5),
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColor.primary, width: 2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-              style: TextStyle(color: AppColor.textColor),
+              labelText: "នាមត្រកូល",
               keyboardType: TextInputType.name,
             ),
             const SizedBox(height: 15),
 
-            // Email Display Field (read-only)
-            TextField(
+            _buildTextField(
               controller: _emailController,
-              readOnly: true, // Email displayed here is read-only
-              decoration: InputDecoration(
-                labelText: "Email",
-                labelStyle: TextStyle(color: AppColor.labelColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColor.labelColor.withOpacity(0.5),
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColor.labelColor.withOpacity(0.5),
-                    width: 2,
-                  ), // Keep focused color same as enabled if readOnly
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-              style: TextStyle(color: AppColor.textColor),
+              labelText: "អ៊ីមែល",
+              readOnly: true,
             ),
             const SizedBox(height: 15),
 
-            // Phone Number Field
-            TextField(
+            _buildTextField(
               controller: _phoneController,
-              decoration: InputDecoration(
-                labelText: "Phone Number",
-                labelStyle: TextStyle(color: AppColor.labelColor),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(
-                    color: AppColor.labelColor.withOpacity(0.5),
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColor.primary, width: 2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-              style: TextStyle(color: AppColor.textColor),
+              labelText: "លេខទូរសព្ទ",
               keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 25),
@@ -870,7 +702,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     )
                   : const Text(
-                      "Update Profile",
+                      "ធ្វើបច្ចុប្បន្នភាពប្រវត្តិរូប",
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -880,37 +712,72 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: 30),
 
-            // Setting Items
-            // _buildSettingItem(
-            //   title: "Change Email",
-            //   leadingIcon: Icons.email_outlined,
-            //   leadingIconColor: AppColor.orange, // Use a suitable color
-            //   onTap: _showChangeEmailDialog,
-            // ),
             _buildSettingItem(
-              title: "Change Password",
+              title: "ប្ដូរអ៊ីមែល",
+              leadingIcon: Icons.email_outlined,
+              leadingIconColor: Colors.blue,
+              onTap: _showChangeEmailDialog,
+            ),
+            _buildSettingItem(
+              title: "ប្ដូរពាក្យសម្ងាត់",
               leadingIcon: Icons.lock_outline,
-              leadingIconColor: AppColor.blue, // Use a suitable color
+              leadingIconColor: Colors.orange,
               onTap: _showChangePasswordDialog,
             ),
             _buildSettingItem(
-              title: "General Setting",
-              leadingIcon: Icons.settings,
-              leadingIconColor: AppColor.orange,
+              title: "ការកក់របស់ខ្ញុំ",
+              leadingIcon: Icons.book_online,
+              leadingIconColor: Colors.purple,
               onTap: () {
-                // TODO: Navigate to General Settings page
+                // Navigate to OrdersScreen
+                Navigator.pushNamed(context, '/ordersScreen');
               },
             ),
-            // Add Log Out button
             _buildSettingItem(
-              title: "Log Out",
+              title: "ចេញពីគណនី",
               leadingIcon: Icons.logout,
-              leadingIconColor: Colors.redAccent, // Red color for logout
+              leadingIconColor: Colors.red,
               onTap: _showConfirmLogout,
             ),
+            const SizedBox(height: 20),
           ],
         ),
       ),
+    );
+  }
+
+  // Helper method for consistent TextField styling
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType keyboardType = TextInputType.text,
+    bool readOnly = false,
+    String? hintText,
+  }) {
+    return TextField(
+      controller: controller,
+      readOnly: readOnly,
+      decoration: InputDecoration(
+        labelText: labelText,
+        hintText: hintText,
+        labelStyle: TextStyle(color: AppColor.labelColor),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: AppColor.labelColor.withOpacity(0.5)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: AppColor.primary, width: 2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+      style: TextStyle(color: AppColor.textColor),
+      keyboardType: keyboardType,
     );
   }
 }

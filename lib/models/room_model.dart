@@ -3,10 +3,11 @@ class Room {
   final String name;
   final String image;
   final String price;
-  final String roomTypeId; // តំណភ្ជាប់ទៅ RoomType
+  final String roomTypeId;
   final String rate;
   final String location;
   final bool isFavorited;
+  final bool isBooked; // ✅ បន្ថែម field នេះ
   final List<String> albumImages;
   final String description;
 
@@ -19,6 +20,7 @@ class Room {
     required this.rate,
     required this.location,
     required this.isFavorited,
+    required this.isBooked, // ✅ បន្ថែមនៅ constructor
     required this.albumImages,
     required this.description,
   });
@@ -29,14 +31,12 @@ class Room {
       name: json['name'] ?? '',
       image: json['image'] ?? '',
       price: json['price']?.toString() ?? '',
-      // ប្រសិនបើ API ផ្ញើ roomTypeId តែម្ដង
       roomTypeId: json['roomTypeId'] ?? '',
-
-      // ឬ ប្រសិនបើ API ផ្ញើ object nested ជា roomType ដូចជា
-      // roomTypeId: json['roomType']?['id'] ?? '',
       rate: json['rate']?.toString() ?? '',
       location: json['location'] ?? '',
       isFavorited: json['is_favorited'] ?? false,
+      isBooked: json['isBooked'] ?? false, // ✅ ទទួលពី API
+
       albumImages: json['album_images'] != null
           ? List<String>.from(json['album_images'])
           : <String>[],
@@ -54,6 +54,7 @@ class Room {
       'rate': rate,
       'location': location,
       'is_favorited': isFavorited,
+      'isBooked': isBooked, // ✅ បញ្ចូលក្នុង JSON
       'album_images': albumImages,
       'description': description,
     };

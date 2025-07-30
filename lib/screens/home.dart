@@ -1,21 +1,18 @@
 import 'dart:convert';
-
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
-import 'package:hotel_booking/models/roomType_model.dart'; // Make sure this path is correct
-import 'package:hotel_booking/models/room_model.dart'; // Make sure this path is correct
+import 'package:hotel_booking/models/roomType_model.dart';
+import 'package:hotel_booking/models/room_model.dart';
 import 'package:hotel_booking/screens/order_page.dart';
-import 'package:hotel_booking/screens/search.dart'; // Assuming search.dart is where kBaseUrl might be defined or you define it here
-import 'package:hotel_booking/theme/color.dart';
-import 'package:hotel_booking/widgets/feature_item.dart'; // Make sure this path is correct
+import 'package:hotel_booking/theme/color.dart'; // Ensure this path is correct
+import 'package:hotel_booking/widgets/feature_item.dart'; // Ensure this path is correct
 import 'package:http/http.dart' as http;
 
-// Define kBaseUrl here if it's not defined in a globally accessible file
-const String kBaseUrl = 'http://localhost:3000/api'; // Or your actual base URL
+// Base URL for your API. For a real app, this should be configurable (e.g., environment variables).
+const String kBaseUrl = 'http://localhost:3000/api';
 
 class HomePage extends StatefulWidget {
-  static const String id = '\HomePage';
-
+  static const String id = '/HomePage';
   const HomePage({Key? key}) : super(key: key);
 
   @override
@@ -24,41 +21,52 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   String? selectedLocation;
-  Map<String, String> roomTypeNames =
-      {}; // key: roomTypeId, value: roomTypeName
-
+  Map<String, String> roomTypeNames = {};
   List<Room> featuredRooms = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Fetch room types first, then rooms
-    fetchRoomTypes().then((_) {
-      fetchFeaturedRooms();
-    });
+    _initializeData();
+  }
+
+  // A single method to handle all initial data fetching
+  Future<void> _initializeData() async {
+    await fetchRoomTypes();
+    await fetchFeaturedRooms();
   }
 
   Future<void> fetchFeaturedRooms() async {
+    setState(() {
+      isLoading = true; // Set loading to true before fetching
+    });
     try {
-      final res = await http.get(Uri.parse('$kBaseUrl/rooms')); // Use kBaseUrl
+      final res = await http.get(Uri.parse('$kBaseUrl/rooms'));
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         setState(() {
-          // Ensure roomTypeId is correctly mapped from the backend response
           featuredRooms = data.map((e) => Room.fromJson(e)).toList();
-          isLoading = false;
         });
       } else {
-        print('Failed to fetch rooms, status: ${res.statusCode}');
-        setState(() {
-          isLoading = false;
-        });
+        // Log the error for debugging
+        print('បរាជ័យក្នុងការទាញយកបន្ទប់, status: ${res.statusCode}');
+        // Optionally show a user-friendly message
+        _showSnackBar(
+          'បរាជ័យក្នុងការទាញយកបន្ទប់។ សូមព្យាយាមម្តងទៀតពេលក្រោយ។',
+          isError: true,
+        );
       }
     } catch (e) {
-      print('Error fetching rooms: $e');
+      print('មានកំហុសពេលទាញយកបន្ទប់: $e');
+      _showSnackBar(
+        'មានកំហុសបណ្តាញ។ សូមពិនិត្យការតភ្ជាប់របស់អ្នក។',
+        isError: true,
+      );
+    } finally {
       setState(() {
-        isLoading = false;
+        isLoading =
+            false; // Set loading to false after fetching (success or failure)
       });
     }
   }
@@ -73,17 +81,40 @@ class _HomePageState extends State<HomePage> {
           roomTypeNames = {for (var type in types) type.id: type.name};
         });
       } else {
-        print("Failed to load room types, status: ${response.statusCode}");
+        print(
+          "បរាជ័យក្នុងការទាញយកប្រភេទបន្ទប់, status: ${response.statusCode}",
+        );
+        _showSnackBar('បរាជ័យក្នុងការទាញយកប្រភេទបន្ទប់។', isError: true);
       }
     } catch (e) {
-      print('Error fetching room types: $e');
+      print('មានកំហុសពេលទាញយកប្រភេទបន្ទប់: $e');
+      _showSnackBar('មានកំហុសបណ្តាញពេលទាញយកប្រភេទបន្ទប់។', isError: true);
     }
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(106, 60, 117, 174),
+      backgroundColor: AppColor.appBgColor, // Use a consistent background color
+      appBar: AppBar(
+        title: const Text(
+          "ស្វែងរកកន្លែងស្នាក់នៅ", // "Find Accommodation"
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: AppColor.cyan, // Use cyan color for AppBar
+        elevation: 0,
+        centerTitle: false, // Align title to start
+      ),
       body: CustomScrollView(
         slivers: [SliverToBoxAdapter(child: _buildBody())],
       ),
@@ -91,60 +122,48 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildBody() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(top: 5, bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionTitle("Find and Book"),
-          _buildCities(),
-          const SizedBox(height: 10),
-          _sectionTitle("All Rooms"),
-          _buildFeatured(),
-          // const SizedBox(height: 15),
-          // _sectionTitle("Recommended", seeAll: true),
-        ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String label, {String? subtitle, bool seeAll = false}) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: AppColor.textColor,
-                ),
-              ),
-              if (subtitle != null)
-                Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 14, color: AppColor.labelColor),
-                ),
-            ],
-          ),
-          if (seeAll)
-            Text(
-              "See all",
-              style: TextStyle(fontSize: 14, color: AppColor.darker),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(15, 10, 15, 5),
+          child: Text(
+            "ស្វែងរក និងកក់", // "Find and Book"
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700, // Make it bolder
+              color: AppColor.textColor,
             ),
-        ],
-      ),
+          ),
+        ),
+        _buildCities(),
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(15, 0, 15, 10),
+          child: Text(
+            "បន្ទប់ទាំងអស់", // "All Rooms"
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700, // Make it bolder
+              color: AppColor.textColor,
+            ),
+          ),
+        ),
+        _buildFeatured(),
+      ],
     );
   }
 
   Widget _buildFeatured() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: CircularProgressIndicator(
+            color: AppColor.cyan, // Use cyan color for loading indicator
+          ),
+        ),
+      );
     }
 
     final filteredRooms = selectedLocation == null
@@ -154,68 +173,117 @@ class _HomePageState extends State<HomePage> {
               .toList();
 
     if (filteredRooms.isEmpty) {
-      return const Center(child: Text("No rooms found in this location."));
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            "មិនមានបន្ទប់រកឃើញនៅក្នុងទីតាំងនេះទេ។",
+            textAlign: TextAlign.center, // Center the text
+            style: TextStyle(color: AppColor.labelColor, fontSize: 16),
+          ), // "No rooms found in this location."
+        ),
+      );
     }
 
-    return CarouselSlider(
+    return CarouselSlider.builder(
+      itemCount: filteredRooms.length,
       options: CarouselOptions(
-        height: 350,
+        height: 420, // Increased height for larger items
         enlargeCenterPage: true,
         disableCenter: true,
-        viewportFraction: .75,
+        viewportFraction: 0.85, // Increased viewport fraction for larger items
+        enableInfiniteScroll:
+            false, // Prevents infinite scrolling if not enough items
       ),
-      items: List.generate(filteredRooms.length, (index) {
+      itemBuilder: (context, index, realIndex) {
         final room = filteredRooms[index];
-        return FeatureItem(
-          data: room,
-          roomTypeName:
-              roomTypeNames[room.roomTypeId] ??
-              'Unknown Type', // <--- Pass the name here
-          onTapFavorite: () {
-            setState(() {
-              final i = featuredRooms.indexWhere((r) => r.id == room.id);
-              if (i != -1) {
-                final updatedRoom = Room(
-                  id: room.id,
-                  name: room.name,
-                  image: room.image,
-                  price: room.price,
-                  roomTypeId: room.roomTypeId, // Keep the ID
-                  rate: room.rate,
-                  location: room.location,
-                  isFavorited: !room.isFavorited,
-                  albumImages: room.albumImages,
-                  description: room.description,
-                );
-                featuredRooms[i] = updatedRoom;
-              }
-            });
-          },
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => OrderViewPage(
-                  roomData: room.toJson(),
-                  roomTypeName:
-                      roomTypeNames[room.roomTypeId] ??
-                      'Unknown Type', // Also pass to OrderViewPage
+        return Stack(
+          children: [
+            // Pass a larger width to FeatureItem
+            FeatureItem(
+              data: room,
+              roomTypeName:
+                  roomTypeNames[room.roomTypeId] ??
+                  'មិនស្គាល់ប្រភេទ', // Unknown Type
+              width:
+                  MediaQuery.of(context).size.width *
+                  0.8, // Make FeatureItem responsive to carousel size
+              onTapFavorite: () {
+                setState(() {
+                  final i = featuredRooms.indexWhere((r) => r.id == room.id);
+                  if (i != -1) {
+                    featuredRooms[i] = Room(
+                      id: room.id,
+                      name: room.name,
+                      image: room.image,
+                      price: room.price,
+                      roomTypeId: room.roomTypeId,
+                      rate: room.rate,
+                      location: room.location,
+                      isFavorited: !room.isFavorited,
+                      albumImages: room.albumImages,
+                      description: room.description,
+                      isBooked: room.isBooked,
+                    );
+                  }
+                });
+              },
+              onTap: room.isBooked
+                  ? null // Disable tap if booked
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderViewPage(
+                            roomData: room.toJson(),
+                            roomTypeName:
+                                roomTypeNames[room.roomTypeId] ??
+                                'មិនស្គាល់ប្រភេទ',
+                          ),
+                        ),
+                      );
+                    },
+            ),
+
+            // Overlay to show "Room has been booked" message
+            if (room.isBooked)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      "បន្ទប់ត្រូវបានកក់ហើយ", // "Room has been booked"
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            );
-          },
+          ],
         );
-      }),
+      },
     );
   }
 
   Widget _buildCities() {
+    // Ensure uniqueLocations is populated after featuredRooms are fetched
     final uniqueLocations = featuredRooms
         .map((room) => room.location)
         .toSet()
         .toList();
 
-    final List<String> allOptions = ['All Rooms', ...uniqueLocations];
+    // Add 'All Rooms' option at the beginning
+    final List<String> allOptions = [
+      'បន្ទប់ទាំងអស់',
+      ...uniqueLocations,
+    ]; // "All Rooms"
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(15, 5, 0, 10),
@@ -223,8 +291,9 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         children: List.generate(allOptions.length, (index) {
           final location = allOptions[index];
-          final isSelected =
-              (selectedLocation == null && location == 'All Rooms') ||
+          // Determine if the current chip is selected
+          final bool isSelected =
+              (selectedLocation == null && location == 'បន្ទប់ទាំងអស់') ||
               (selectedLocation == location);
 
           return Padding(
@@ -232,21 +301,30 @@ class _HomePageState extends State<HomePage> {
             child: GestureDetector(
               onTap: () {
                 setState(() {
-                  if (location == 'All Rooms') {
-                    selectedLocation = null;
-                  } else {
-                    selectedLocation = location;
-                  }
+                  // If 'All Rooms' is selected, set selectedLocation to null to show all rooms
+                  selectedLocation = (location == 'បន្ទប់ទាំងអស់')
+                      ? null
+                      : location;
                 });
               },
               child: Chip(
                 label: Text(location),
                 backgroundColor: isSelected
                     ? AppColor
-                          .inActiveColor // Replace with your primary color
+                          .cyan // Use cyan color for selected chip
                     : Colors.grey[300],
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : Colors.black,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(
+                    20,
+                  ), // More rounded corners
                 ),
               ),
             ),

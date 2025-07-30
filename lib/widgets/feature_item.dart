@@ -8,17 +8,15 @@ class FeatureItem extends StatelessWidget {
   const FeatureItem({
     Key? key,
     required this.data,
-    required this.roomTypeName, // This is the room type name (e.g., "Standard", "Deluxe")
+    required this.roomTypeName,
     this.width = 280,
-    this.height = 300,
     this.onTap,
     this.onTapFavorite,
   }) : super(key: key);
 
-  final String roomTypeName; // The human-readable room type name
+  final String roomTypeName;
   final Room data;
   final double width;
-  final double height;
   final GestureTapCallback? onTapFavorite;
   final GestureTapCallback? onTap;
 
@@ -26,43 +24,64 @@ class FeatureItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: width,
-        height: height,
-        padding: const EdgeInsets.all(10),
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColor.shadowColor.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 1,
-              offset: const Offset(1, 1), // changes position of shadow
+      child: Stack(
+        children: [
+          Container(
+            width: width,
+            padding: const EdgeInsets.all(10),
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColor.shadowColor.withOpacity(0.1),
+                  spreadRadius: 1,
+                  blurRadius: 1,
+                  offset: const Offset(1, 1),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildImage(data),
-            Container(
-              width: width - 20,
-              padding: const EdgeInsets.fromLTRB(5, 10, 5, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildName(data),
-                  const SizedBox(height: 5),
-                  _buildInfo(
-                    data,
-                  ), // This method is updated to show type name and location
-                ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildImage(data),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(5, 10, 5, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildName(data),
+                      const SizedBox(height: 5),
+                      _buildInfo(data),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // បន្ថែម Badge ប្រសិនបើបានកក់
+          if (data.isBooked)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black45,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Center(
+                  child: Text(
+                    "បានកក់", // "Booked" in Khmer
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -80,7 +99,6 @@ class FeatureItem extends StatelessWidget {
     );
   }
 
-  // Updated _buildInfo to display room type name and location on separate lines
   Widget _buildInfo(Room room) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -88,38 +106,36 @@ class FeatureItem extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Room Type Name
             Row(
               children: [
                 Icon(
-                  Icons.category_outlined, // Using a category icon for type
+                  Icons.category_outlined,
                   color: AppColor.labelColor,
                   size: 13,
                 ),
                 const SizedBox(width: 2),
                 Text(
-                  roomTypeName, // Display the human-readable room type name
+                  roomTypeName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: AppColor.labelColor, fontSize: 13),
                 ),
               ],
             ),
-            const SizedBox(height: 3), // Small vertical space between lines
-            // Room Location
+            const SizedBox(height: 3),
             Row(
               children: [
                 Icon(Icons.place, color: AppColor.labelColor, size: 13),
                 const SizedBox(width: 2),
                 Text(
-                  data.location, // Display room location
+                  data.location,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: AppColor.labelColor, fontSize: 13),
                 ),
               ],
             ),
-            const SizedBox(height: 8), // Space before price
+            const SizedBox(height: 8),
             Text(
               '\$${data.price}',
               maxLines: 1,

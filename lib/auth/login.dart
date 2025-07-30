@@ -2,11 +2,13 @@ import 'dart:convert'; // For JSON encoding/decoding
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart'; // Core Flutter widgets
 import 'package:hotel_booking/models/user_model.dart'; // User model definition
+import 'package:hotel_booking/screens/dashboard.dart';
 import 'package:hotel_booking/screens/root_app.dart'; // The main admin dashboard
 import 'package:hotel_booking/theme/color.dart'; // Your app's custom color theme
 import 'package:http/http.dart' as http; // For making HTTP requests
 import 'package:hotel_booking/auth/register.dart'; // For navigating to the registration page
 import 'package:shared_preferences/shared_preferences.dart'; // For local data storage (e.g., user session)
+import 'package:hotel_booking/screens/home.dart'; // Import HomePage
 
 /// A stateful widget for the user login page.
 /// This page allows users to enter their credentials and log in.
@@ -73,25 +75,44 @@ class _LoginPageState extends State<LoginPage> {
         // Save user model JSON and user email separately for session persistence
         await prefs.setString('user', json.encode(userModel.toJson()));
         await prefs.setString('email', user.email ?? '');
+        await prefs.setString('userId', user.uid ?? '');
+        await prefs.setString(
+          'userRole',
+          userModel.role,
+        ); // Save the user's role
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Login successful! Welcome back, ${user.email}'),
+              content: Text(
+                'ចូលដោយជោគជ័យ! សូមស្វាគមន៍ត្រឡប់មកវិញ, ${user.email}',
+              ), // Login successful! Welcome back,
               backgroundColor: Colors.green,
             ),
           );
         }
 
         if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const RootApp()),
-          );
+          // Navigate based on user role
+          if (userModel.role == 'admin') {
+            // Assuming 'admin' is the role for administrators
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
+            );
+          } else {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const HomePage(),
+              ), // Navigate to HomePage for regular users
+            );
+          }
         }
       } else {
         final responseBody = json.decode(response.body);
-        final errorMessage = responseBody['error'] ?? 'Login failed';
+        final errorMessage =
+            responseBody['error'] ?? 'ការចូលបរាជ័យ'; // Login failed
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(errorMessage), backgroundColor: Colors.red),
@@ -99,9 +120,14 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Login failed. Please check your credentials.';
-      if (e.code == 'user-not-found') message = 'No user found for that email.';
-      if (e.code == 'wrong-password') message = 'Wrong password provided.';
+      String message =
+          'ការចូលបរាជ័យ។ សូមពិនិត្យមើលព័ត៌មានសម្ងាត់របស់អ្នក។'; // Login failed. Please check your credentials.
+      if (e.code == 'user-not-found')
+        message =
+            'រកមិនឃើញអ្នកប្រើប្រាស់សម្រាប់អ៊ីមែលនោះទេ។'; // No user found for that email.
+      if (e.code == 'wrong-password')
+        message =
+            'ពាក្យសម្ងាត់ខុសត្រូវបានផ្តល់ជូន។'; // Wrong password provided.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(message), backgroundColor: Colors.red),
@@ -112,7 +138,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              "Network error: Could not connect to the server. Please check your internet connection.",
+              "កំហុសបណ្តាញ: មិនអាចភ្ជាប់ទៅម៉ាស៊ីនមេបានទេ។ សូមពិនិត្យមើលការតភ្ជាប់អ៊ីនធឺណិតរបស់អ្នក។", // Network error: Could not connect to the server. Please check your internet connection.
             ),
             backgroundColor: Colors.red,
           ),
@@ -122,7 +148,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Unexpected error: $e"),
+            content: Text("កំហុសដែលមិនបានរំពឹងទុក: $e"), // Unexpected error:
             backgroundColor: Colors.red,
           ),
         );
@@ -141,7 +167,7 @@ class _LoginPageState extends State<LoginPage> {
           AppColor.appBgColor, // Set background color from your theme
       appBar: AppBar(
         title: const Text(
-          "Login",
+          "ចូល", // Login
           style: TextStyle(color: AppColor.textColor), // AppBar title style
         ),
         backgroundColor: AppColor.appBarColor, // AppBar background color
@@ -159,7 +185,7 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 // Welcome Back! text
                 Text(
-                  "Welcome Back!",
+                  "សូមស្វាគមន៍ត្រឡប់មកវិញ!", // Welcome Back!
                   style: TextStyle(
                     color: AppColor.textColor,
                     fontSize: 28,
@@ -170,7 +196,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 10),
                 // Sign in message
                 Text(
-                  "Sign in to continue to your account",
+                  "ចូលដើម្បីបន្តទៅគណនីរបស់អ្នក", // Sign in to continue to your account
                   style: TextStyle(color: AppColor.labelColor, fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
@@ -179,16 +205,16 @@ class _LoginPageState extends State<LoginPage> {
                 // Email Input Field
                 _buildTextFormField(
                   controller: _emailController,
-                  labelText: "Email",
-                  hintText: "Enter your email",
+                  labelText: "អ៊ីមែល", // Email
+                  hintText: "បញ្ចូលអ៊ីមែលរបស់អ្នក", // Enter your email
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
+                      return 'សូមបញ្ចូលអ៊ីមែលរបស់អ្នក'; // Please enter your email
                     }
                     if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                      return 'Please enter a valid email address';
+                      return 'សូមបញ្ចូលអាសយដ្ឋានអ៊ីមែលត្រឹមត្រូវ'; // Please enter a valid email address
                     }
                     return null;
                   },
@@ -198,8 +224,8 @@ class _LoginPageState extends State<LoginPage> {
                 // Password Input Field
                 _buildPasswordFormField(
                   controller: _passwordController,
-                  labelText: "Password",
-                  hintText: "Enter your password",
+                  labelText: "ពាក្យសម្ងាត់", // Password
+                  hintText: "បញ្ចូលពាក្យសម្ងាត់របស់អ្នក", // Enter your password
                   isVisible: _isPasswordVisible,
                   toggleVisibility: () {
                     setState(() {
@@ -208,7 +234,7 @@ class _LoginPageState extends State<LoginPage> {
                   },
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
+                      return 'សូមបញ្ចូលពាក្យសម្ងាត់របស់អ្នក'; // Please enter your password
                     }
                     return null;
                   },
@@ -223,13 +249,13 @@ class _LoginPageState extends State<LoginPage> {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text(
-                            'Forgot Password functionality coming soon!',
+                            'មុខងារភ្លេចពាក្យសម្ងាត់នឹងមកដល់ឆាប់ៗនេះ!', // Forgot Password functionality coming soon!
                           ),
                         ),
                       );
                     },
                     child: Text(
-                      "Forgot Password?",
+                      "ភ្លេចពាក្យសម្ងាត់?", // Forgot Password?
                       style: TextStyle(
                         color: AppColor.labelColor,
                         fontSize: 14,
@@ -261,7 +287,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         )
                       : Text(
-                          "Login",
+                          "ចូល", // Login
                           style: TextStyle(
                             color:
                                 AppColor.textColor, // Text color for the button
@@ -277,7 +303,7 @@ class _LoginPageState extends State<LoginPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account?",
+                      "មិនមានគណនីទេ?", // Don't have an account?
                       style: TextStyle(
                         color: AppColor.labelColor,
                         fontSize: 15,
@@ -293,7 +319,7 @@ class _LoginPageState extends State<LoginPage> {
                         );
                       },
                       child: Text(
-                        "Register",
+                        "ចុះឈ្មោះ", // Register
                         style: TextStyle(
                           color: AppColor
                               .cyan, // Primary color for the register link

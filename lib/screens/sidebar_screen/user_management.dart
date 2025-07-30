@@ -93,7 +93,12 @@ class _UserManagementState extends State<UserManagement> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ការគ្រប់គ្រងអ្នកប្រើប្រាស់"),
+        backgroundColor: Colors.cyan,
+
+        title: const Text(
+          "ការគ្រប់គ្រងអ្នកប្រើប្រាស់",
+          style: TextStyle(color: Colors.white70),
+        ),
         centerTitle: true,
         elevation: 2,
       ),

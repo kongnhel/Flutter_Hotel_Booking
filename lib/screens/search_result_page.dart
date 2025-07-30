@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/room_model.dart';
 import 'package:hotel_booking/screens/order_page.dart';
+import 'package:hotel_booking/theme/color.dart'; // Assuming AppColor is defined here
 
 class SearchResultsPage extends StatelessWidget {
   final Map<String, dynamic> searchParameters;
   final List<Room> searchResults;
+  final Map<String, String> roomTypeNames; // Added to provide room type names
 
   const SearchResultsPage({
     super.key,
     required this.searchParameters,
-    required this.searchResults, required Map<String, String> roomTypeNames,
+    required this.searchResults,
+    required this.roomTypeNames, // Required for displaying room type names
   });
 
   @override
@@ -17,7 +20,7 @@ class SearchResultsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Search Results',
+          'លទ្ធផលស្វែងរក', // Search Results
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.blueGrey[800],
@@ -40,13 +43,13 @@ class SearchResultsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No rooms found for "${searchParameters['category']}"',
+                    'រកមិនឃើញបន្ទប់សម្រាប់ "${searchParameters['category'] ?? 'ប្រភេទនេះ'}"', // No rooms found for "this category"
                     style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Try a different category or criteria.',
+                    'សូមសាកល្បងប្រភេទ ឬលក្ខណៈវិនិច្ឆ័យផ្សេងទៀត។', // Try a different category or criteria.
                     style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                     textAlign: TextAlign.center,
                   ),
@@ -58,6 +61,9 @@ class SearchResultsPage extends StatelessWidget {
               itemCount: searchResults.length,
               itemBuilder: (context, index) {
                 final room = searchResults[index];
+                final String currentRoomTypeName =
+                    roomTypeNames[room.roomTypeId] ??
+                    'មិនស្គាល់ប្រភេទ'; // Get translated room type name
 
                 return GestureDetector(
                   onTap: () {
@@ -66,7 +72,8 @@ class SearchResultsPage extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => OrderViewPage(
                           roomData: room.toJson(),
-                          roomTypeName: '',
+                          roomTypeName:
+                              currentRoomTypeName, // Pass the correct room type name
                         ),
                       ),
                     );
@@ -121,7 +128,7 @@ class SearchResultsPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Type: ${room.roomTypeId}',
+                                  'ប្រភេទ: $currentRoomTypeName', // Display translated room type name
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -129,7 +136,7 @@ class SearchResultsPage extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Location: ${room.location}',
+                                  'ទីតាំង: ${room.location}', // Location:
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],

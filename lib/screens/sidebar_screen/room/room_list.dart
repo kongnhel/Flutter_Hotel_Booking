@@ -1,9 +1,14 @@
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:convert';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hotel_booking/models/room_model.dart'; // Ensure this path is correct
 import 'package:hotel_booking/screens/sidebar_screen/room/add_room.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:image_picker/image_picker.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
 // IMPORTANT: Update this URL for production deployments!
 const String kBaseUrl =
@@ -36,8 +41,8 @@ class _RoomListScreenState extends State<RoomListScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: isError
-            ? const Color.fromRGBO(244, 67, 54, 1)
-            : Colors.green,
+            ? const Color.fromRGBO(244, 67, 54, 1) // Red for error
+            : Colors.green, // Green for success
         duration: const Duration(seconds: 2),
       ),
     );
@@ -76,7 +81,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
           'RoomListScreen: Failed to fetch rooms, status: ${res.statusCode}, Body: ${res.body}',
         );
         _showSnackBar(
-          'Failed to load rooms. Status: ${res.statusCode}',
+          'បរាជ័យក្នុងការផ្ទុកបន្ទប់។ ស្ថានភាព: ${res.statusCode}',
           isError: true,
         );
         setState(() {
@@ -85,7 +90,7 @@ class _RoomListScreenState extends State<RoomListScreen> {
       }
     } catch (e) {
       debugPrint('RoomListScreen: Error fetching rooms: $e');
-      _showSnackBar('Network error while fetching rooms.', isError: true);
+      _showSnackBar('កំហុសបណ្តាញពេលទាញយកបន្ទប់។', isError: true);
       setState(() {
         _isFetchingRooms = false;
       });
@@ -102,22 +107,27 @@ class _RoomListScreenState extends State<RoomListScreen> {
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('Confirm Deletion'),
-              content: const Text('Are you sure you want to delete this room?'),
+              title: const Text('បញ្ជាក់ការលុប'), // Confirm Deletion
+              content: const Text(
+                'តើអ្នកប្រាកដជាចង់លុបបន្ទប់នេះទេ?',
+              ), // Are you sure you want to delete this room?
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
                     debugPrint('RoomListScreen: Delete cancelled by user.');
                     Navigator.of(context).pop(false);
                   },
-                  child: const Text('Cancel'),
+                  child: const Text('បោះបង់'), // Cancel
                 ),
                 TextButton(
                   onPressed: () {
                     debugPrint('RoomListScreen: Delete confirmed by user.');
                     Navigator.of(context).pop(true);
                   },
-                  child: const Text('Delete'),
+                  child: const Text('លុប'), // Delete
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ), // Red color for delete
                 ),
               ],
             );
@@ -140,7 +150,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
       }
 
       if (res.statusCode == 200) {
-        _showSnackBar('Room deleted successfully');
+        _showSnackBar(
+          'បន្ទប់ត្រូវបានលុបដោយជោគជ័យ',
+        ); // Room deleted successfully
         debugPrint(
           'RoomListScreen: Room deleted successfully. Refreshing list...',
         );
@@ -148,13 +160,16 @@ class _RoomListScreenState extends State<RoomListScreen> {
       } else {
         debugPrint('RoomListScreen: Delete failed: ${res.body}');
         _showSnackBar(
-          'Failed to delete room. Status: ${res.statusCode}',
+          'បរាជ័យក្នុងការលុបបន្ទប់។ ស្ថានភាព: ${res.statusCode}', // Failed to delete room. Status:
           isError: true,
         );
       }
     } catch (e) {
       debugPrint('RoomListScreen: Delete error: $e');
-      _showSnackBar('Network error. Failed to delete room.', isError: true);
+      _showSnackBar(
+        'កំហុសបណ្តាញ។ បរាជ័យក្នុងការលុបបន្ទប់។',
+        isError: true,
+      ); // Network error. Failed to delete room.
     }
   }
 
@@ -165,11 +180,18 @@ class _RoomListScreenState extends State<RoomListScreen> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Room List Admin'),
+        title: const Text(
+          'បញ្ជីបន្ទប់អ្នកគ្រប់គ្រង', // Room List Admin
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.cyan, // Consistent app bar color
         actions: [
           IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Add New Room',
+            icon: const Icon(
+              Icons.add,
+              color: Colors.white,
+            ), // White icon for consistency
+            tooltip: 'បន្ថែមបន្ទប់ថ្មី', // Add New Room
             onPressed: () async {
               debugPrint(
                 'RoomListScreen: Navigating to AddRoomScreen to add new room.',
@@ -178,7 +200,6 @@ class _RoomListScreenState extends State<RoomListScreen> {
                 context,
                 MaterialPageRoute(builder: (context) => const AddRoomScreen()),
               );
-              // This line is crucial. Check if it appears in your logs.
               debugPrint(
                 'RoomListScreen: Returned from AddRoomScreen with result: $result',
               );
@@ -199,16 +220,23 @@ class _RoomListScreenState extends State<RoomListScreen> {
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: fetchRooms,
+          color: Colors.deepPurple, // Consistent refresh indicator color
           child:
               _isFetchingRooms // Show loading indicator if currently fetching
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Colors.deepPurple,
+                    ), // Consistent loading color
+                  ),
+                )
               : rooms
                     .isEmpty // If not fetching and rooms are empty, show message
               ? const Center(
                   child: Padding(
                     padding: EdgeInsets.all(20.0),
                     child: Text(
-                      'No rooms added yet. Pull down to refresh or click "+" to add one!',
+                      'មិនទាន់មានបន្ទប់ត្រូវបានបន្ថែមនៅឡើយទេ។ ទាញចុះក្រោមដើម្បីធ្វើឱ្យស្រស់ ឬចុច "+" ដើម្បីបន្ថែម!', // No rooms added yet. Pull down to refresh or click "+" to add one!
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
@@ -222,54 +250,91 @@ class _RoomListScreenState extends State<RoomListScreen> {
                     final room = rooms[index];
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 8),
-                      elevation: 2,
+                      elevation: 4, // Increased elevation for better shadow
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(
+                          12,
+                        ), // Rounded corners
+                      ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 16, // Increased horizontal padding
+                          vertical: 12, // Increased vertical padding
                         ),
                         leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // More rounded image corners
                           child: Image.network(
                             room.image,
-                            width: 60,
-                            height: 60,
+                            width: 80, // Larger image
+                            height: 80, // Larger image
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Container(
-                              width: 60,
-                              height: 60,
+                              width: 80,
+                              height: 80,
                               color: Colors.grey[300],
                               child: const Icon(
                                 Icons.broken_image,
                                 color: Colors.grey,
-                                size: 30,
+                                size: 40, // Larger icon
                               ),
                             ),
                           ),
                         ),
                         title: Text(
                           room.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18, // Larger title font
+                            color: Colors.deepPurple, // Title color
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            const SizedBox(height: 4),
                             Text(
-                              'Price: \$${room.price}',
+                              'តម្លៃ: \$${room.price}', // Price:
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
                             ),
                             Text(
-                              'Type: ${room.roomTypeId}', // Display roomTypeId for now, or actual type name if available
+                              'ប្រភេទ: ${room.roomTypeId}', // Type:
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
                             ),
                             Text(
-                              'Location: ${room.location}',
+                              'ទីតាំង: ${room.location}', // Location:
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              room.isBooked
+                                  ? 'ស្ថានភាព: បានកក់' // Status: Booked
+                                  : 'ស្ថានភាព: មាន', // Status: Available
+                              style: TextStyle(
+                                color: room.isBooked
+                                    ? Colors.redAccent
+                                    : Colors.green,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         ),
@@ -279,8 +344,9 @@ class _RoomListScreenState extends State<RoomListScreen> {
                             IconButton(
                               icon: const Icon(
                                 Icons.edit,
-                                color: Colors.blue,
-                                size: 24,
+                                color:
+                                    Colors.blueAccent, // Consistent edit color
+                                size: 26, // Larger icon
                               ),
                               onPressed: () async {
                                 debugPrint(
@@ -308,18 +374,19 @@ class _RoomListScreenState extends State<RoomListScreen> {
                                   );
                                 }
                               },
-                              tooltip: 'Edit Room',
+                              tooltip: 'កែសម្រួលបន្ទប់', // Edit Room
                             ),
                             IconButton(
                               icon: const Icon(
                                 Icons.delete,
-                                color: Colors.red,
-                                size: 24,
+                                color:
+                                    Colors.redAccent, // Consistent delete color
+                                size: 26, // Larger icon
                               ),
                               onPressed: room.id != null
                                   ? () => deleteRoom(room.id!)
                                   : null,
-                              tooltip: 'Delete Room',
+                              tooltip: 'លុបបន្ទប់', // Delete Room
                             ),
                           ],
                         ),

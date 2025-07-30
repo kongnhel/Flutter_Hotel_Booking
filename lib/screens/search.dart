@@ -32,10 +32,11 @@ class _SearchPageState extends State<SearchPage> {
   int _rooms = 1;
 
   final List<Map<String, String>> cities = [
-    {'name': 'Phnom Penh'},
-    {'name': 'Siem Reap'},
-    {'name': 'Sihanoukville'},
-    {'name': 'Battambang'},
+    {'name': 'ភ្នំពេញ'},
+    {'name': 'សៀមរាប'},
+    {'name': 'ព្រះសីហនុ'},
+    {'name': 'បាត់ដំបង'},
+    {'name': 'បន្ទាយមានជ័យ'},
   ];
 
   Map<String, String> roomTypeNames =
@@ -69,10 +70,12 @@ class _SearchPageState extends State<SearchPage> {
           }
         });
       } else {
-        debugPrint("Failed to load room types, status: ${response.statusCode}");
+        debugPrint(
+          "បរាជ័យក្នុងការផ្ទុកប្រភេទបន្ទប់, ស្ថានភាព: ${response.statusCode}",
+        );
       }
     } catch (e) {
-      debugPrint('Error fetching room types: $e');
+      debugPrint('កំហុសក្នុងការទាញយកប្រភេទបន្ទប់: $e');
     }
   }
 
@@ -86,10 +89,10 @@ class _SearchPageState extends State<SearchPage> {
           // filteredRooms = allRooms; // No longer needed for local display
         });
       } else {
-        debugPrint("Failed to load rooms: ${res.statusCode}");
+        debugPrint("បរាជ័យក្នុងការផ្ទុកបន្ទប់: ${res.statusCode}");
       }
     } catch (e) {
-      debugPrint("Error fetching rooms: $e");
+      debugPrint("កំហុសក្នុងការទាញយកបន្ទប់: $e");
     }
   }
 
@@ -111,16 +114,16 @@ class _SearchPageState extends State<SearchPage> {
 
     // Get the display name for the category
     final String categoryDisplayName =
-        roomTypeNames[categoryIdQuery] ?? 'Any Category';
+        roomTypeNames[categoryIdQuery] ?? 'ប្រភេទណាមួយ';
 
     final searchParams = {
-      'location': cityQuery.isNotEmpty ? cityQuery : 'Anywhere',
+      'location': cityQuery.isNotEmpty ? cityQuery : 'គ្រប់ទីកន្លែង',
       'checkIn': _checkInController.text.isNotEmpty
           ? _checkInController.text
-          : 'Any Date',
+          : 'ថ្ងៃណាមួយ',
       'checkOut': _checkOutController.text.isNotEmpty
           ? _checkOutController.text
-          : 'Any Date',
+          : 'ថ្ងៃណាមួយ',
       'guests': _guests,
       'rooms': _rooms,
       'category': categoryDisplayName, // Pass the display name
@@ -152,7 +155,7 @@ class _SearchPageState extends State<SearchPage> {
                 color: Colors.grey[800],
                 child: const Center(
                   child: Text(
-                    'Failed to load image',
+                    'បរាជ័យក្នុងការផ្ទុករូបភាព',
                     style: TextStyle(color: Colors.white),
                   ),
                 ),
@@ -190,18 +193,35 @@ class _SearchPageState extends State<SearchPage> {
                     Row(
                       children: [
                         ElevatedButton.icon(
-                          icon: const Icon(Icons.arrow_back),
-                          label: const Text("Back"),
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            "ត្រឡប់ក្រោយ",
+                            style: TextStyle(color: Colors.white),
+                          ),
                           onPressed: () => Navigator.pop(context),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                Colors.cyan, // Modern button color
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 15,
+                              vertical: 10,
+                            ),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'Welcome to your next\nAdventure!',
+                            'សូមស្វាគមន៍មកកាន់ដំណើរផ្សងព្រេងបន្ទាប់របស់អ្នក!',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue,
+                              color: Colors.cyan, // Cohesive color
                             ),
                           ),
                         ),
@@ -209,14 +229,14 @@ class _SearchPageState extends State<SearchPage> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Discover the Perfect Stay with WanderStay',
+                      'ស្វែងរកកន្លែងស្នាក់នៅដ៏ល្អឥតខ្ចោះជាមួយ WanderStay',
                       style: TextStyle(fontSize: 14, color: Colors.orange),
                     ),
                     const SizedBox(height: 24),
 
                     // City Dropdown
                     const Text(
-                      'Where?',
+                      'នៅឯណា?',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -237,7 +257,7 @@ class _SearchPageState extends State<SearchPage> {
 
                     // Room Category
                     const Text(
-                      'Room Category',
+                      'ប្រភេទបន្ទប់',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -256,14 +276,16 @@ class _SearchPageState extends State<SearchPage> {
                       child: ElevatedButton(
                         onPressed: _handleSearch,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor:
+                              Colors.cyan, // Modern button color
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          elevation: 5, // Add elevation for better look
                         ),
                         child: const Text(
-                          'FIND',
+                          'ស្វែងរក',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -299,6 +321,7 @@ class _SearchPageState extends State<SearchPage> {
         child: DropdownButton<String>(
           isExpanded: true,
           value: value,
+          hint: const Text("ជ្រើសរើសទីក្រុង"), // Add a hint text
           icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
           onChanged: onChanged,
           items: list.map((item) {
@@ -329,6 +352,7 @@ class _SearchPageState extends State<SearchPage> {
         child: DropdownButton<String>(
           isExpanded: true,
           value: value,
+          hint: const Text("ជ្រើសរើសប្រភេទបន្ទប់"), // Add a hint text
           icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
           onChanged: onChanged,
           items: roomTypesMap.entries.map((entry) {
@@ -345,9 +369,9 @@ class _SearchPageState extends State<SearchPage> {
   Widget _buildDateFields() {
     return Row(
       children: [
-        Expanded(child: _buildDateField('Check-in', _checkInController)),
+        Expanded(child: _buildDateField('ថ្ងៃចូល', _checkInController)),
         const SizedBox(width: 16),
-        Expanded(child: _buildDateField('Check-out', _checkOutController)),
+        Expanded(child: _buildDateField('ថ្ងៃចេញ', _checkOutController)),
       ],
     );
   }
@@ -404,7 +428,7 @@ class _SearchPageState extends State<SearchPage> {
       children: [
         Expanded(
           child: _buildCounter(
-            'Guests',
+            'ភ្ញៀវ',
             _guests,
             (val) => setState(() => _guests = val),
           ),
@@ -412,7 +436,7 @@ class _SearchPageState extends State<SearchPage> {
         const SizedBox(width: 16),
         Expanded(
           child: _buildCounter(
-            'Room',
+            'បន្ទប់',
             _rooms,
             (val) => setState(() => _rooms = val),
           ),
@@ -473,7 +497,9 @@ class _SearchPageState extends State<SearchPage> {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: isAdd ? Colors.blue : Colors.grey[300],
+          color: isAdd
+              ? Colors.cyan
+              : Colors.grey[300], // Consistent color
           shape: BoxShape.circle,
         ),
         child: Icon(icon, size: 18, color: isAdd ? Colors.white : Colors.grey),

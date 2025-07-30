@@ -40,16 +40,16 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
   List<Map<String, dynamic>> roomTypes = [];
   String? selectedRoomTypeId;
 
-  String selectedLocation = 'Phnom Penh'; // Default selected location
+  String selectedLocation = 'ភ្នំពេញ'; // Default selected location
   final List<String> locations = const [
-    'Phnom Penh',
-    'Siem Reap',
-    'Battambang',
-    'Sihanoukville',
-    'Kampot',
-    'Kep',
-    'Koh Rong',
-    'Beanteay Meanchey',
+    'ភ្នំពេញ',
+    'សៀមរាប',
+    'បាត់ដំបង',
+    'ព្រះសីហនុ',
+    'កំពត',
+    'កែប',
+    'កោះរុង',
+    'បន្ទាយមានជ័យ',
   ];
 
   @override
@@ -131,11 +131,11 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
         debugPrint(
           'AddRoomScreen: Failed to fetch room types: ${res.statusCode}, Body: ${res.body}',
         );
-        _showSnackBar('Failed to load room types.', isError: true);
+        _showSnackBar('បរាជ័យក្នុងការផ្ទុកប្រភេទបន្ទប់។', isError: true);
       }
     } catch (e) {
       debugPrint('AddRoomScreen: Error fetching room types: $e');
-      _showSnackBar('Network error while fetching room types.', isError: true);
+      _showSnackBar('កំហុសបណ្តាញពេលទាញយកប្រភេទបន្ទប់។', isError: true);
     }
   }
 
@@ -160,7 +160,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     setState(() {
       uploadedImageUrl = null;
       selectedRoomTypeId = roomTypes.isNotEmpty ? roomTypes[0]['id'] : null;
-      selectedLocation = 'Phnom Penh';
+      selectedLocation = 'ភ្នំពេញ';
       _editingRoomId = null; // Clear editing state
     });
     debugPrint('AddRoomScreen: Form reset.');
@@ -227,12 +227,12 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) {
-      _showSnackBar('No image selected.');
+      _showSnackBar('មិនមានរូបភាពត្រូវបានជ្រើសរើសទេ។');
       debugPrint('AddRoomScreen: No image selected.');
       return;
     }
 
-    _showSnackBar('Uploading image...');
+    _showSnackBar('កំពុងបង្ហោះរូបភាព...');
 
     final url = await uploadImage(picked);
     debugPrint("AddRoomScreen: Uploaded URL: $url");
@@ -243,9 +243,12 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       setState(() {
         uploadedImageUrl = url;
       });
-      _showSnackBar('Image uploaded successfully!');
+      _showSnackBar('រូបភាពត្រូវបានបង្ហោះដោយជោគជ័យ!');
     } else {
-      _showSnackBar('Failed to upload image. Please try again.', isError: true);
+      _showSnackBar(
+        'បរាជ័យក្នុងការបង្ហោះរូបភាព។ សូមព្យាយាមម្តងទៀត។',
+        isError: true,
+      );
     }
   }
 
@@ -258,13 +261,13 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     }
 
     if (uploadedImageUrl == null || uploadedImageUrl!.isEmpty) {
-      _showSnackBar('Please upload an image for the room.', isError: true);
+      _showSnackBar('សូមបង្ហោះរូបភាពសម្រាប់បន្ទប់។', isError: true);
       debugPrint('AddRoomScreen: No image uploaded.');
       return;
     }
 
     if (selectedRoomTypeId == null) {
-      _showSnackBar('Please select a room type.', isError: true);
+      _showSnackBar('សូមជ្រើសរើសប្រភេទបន្ទប់។', isError: true);
       debugPrint('AddRoomScreen: No room type selected.');
       return;
     }
@@ -287,6 +290,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       rate: '4.5',
       location: selectedLocation,
       isFavorited: false,
+      isBooked: false,
       albumImages: const [],
       description: descriptionController.text.trim(),
     );
@@ -306,7 +310,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       }
 
       if (res.statusCode == 201) {
-        _showSnackBar('Room added successfully!');
+        _showSnackBar('បន្ទប់ត្រូវបានបន្ថែមដោយជោគជ័យ!');
         _resetForm();
         debugPrint(
           'AddRoomScreen: Room added successfully. Popping with true.',
@@ -317,21 +321,20 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
           'AddRoomScreen: Failed to add room. Status: ${res.statusCode}, Body: ${res.body}',
         );
         _showSnackBar(
-          'Failed to add room. Status: ${res.statusCode}.',
+          'បរាជ័យក្នុងការបន្ថែមបន្ទប់។ ស្ថានភាព: ${res.statusCode}។',
           isError: true,
         );
       }
     } catch (e) {
       debugPrint('AddRoomScreen: Add room error: $e');
       _showSnackBar(
-        'Network error. Failed to add room. Please try again.',
+        'កំហុសបណ្តាញ។ បរាជ័យក្នុងការបន្ថែមបន្ទប់។ សូមព្យាយាមម្តងទៀត។',
         isError: true,
       );
     }
   }
 
   Future<void> _updateRoom(String id) async {
-    debugPrint('AddRoomScreen: _updateRoom called for ID: $id');
     final updatedRoom = Room(
       id: id,
       name: nameController.text.trim(),
@@ -341,6 +344,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       rate: '4.5',
       location: selectedLocation,
       isFavorited: false,
+      isBooked: false,
       albumImages: const [],
       description: descriptionController.text.trim(),
     );
@@ -360,7 +364,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       }
 
       if (res.statusCode == 200) {
-        _showSnackBar('Room updated successfully!');
+        _showSnackBar('បន្ទប់ត្រូវបានធ្វើបច្ចុប្បន្នភាពដោយជោគជ័យ!');
         _resetForm();
         debugPrint(
           'AddRoomScreen: Room updated successfully. Popping with true.',
@@ -369,13 +373,16 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       } else {
         debugPrint('AddRoomScreen: Update failed: ${res.body}');
         _showSnackBar(
-          'Failed to update room. Status: ${res.statusCode}',
+          'បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពបន្ទប់។ ស្ថានភាព: ${res.statusCode}។',
           isError: true,
         );
       }
     } catch (e) {
       debugPrint('AddRoomScreen: Update error: $e');
-      _showSnackBar('Network error. Failed to update room.', isError: true);
+      _showSnackBar(
+        'កំហុសបណ្តាញ។ បរាជ័យក្នុងការធ្វើបច្ចុប្បន្នភាពបន្ទប់។',
+        isError: true,
+      );
     }
   }
 
@@ -396,7 +403,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       }
 
       if (response.statusCode == 201) {
-        _showSnackBar('Room type added');
+        _showSnackBar('ប្រភេទបន្ទប់ត្រូវបានបន្ថែម');
         debugPrint(
           'AddRoomScreen: Room type added successfully. Refreshing dropdown.',
         );
@@ -405,11 +412,11 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
         debugPrint(
           'AddRoomScreen: Failed to add room type: ${response.statusCode}, Body: ${response.body}',
         );
-        _showSnackBar('Failed to add room type.', isError: true);
+        _showSnackBar('បរាជ័យក្នុងការបន្ថែមប្រភេទបន្ទប់។', isError: true);
       }
     } catch (e) {
       debugPrint('AddRoomScreen: Add room type error: $e');
-      _showSnackBar('Network error. Please try again.', isError: true);
+      _showSnackBar('កំហុសបណ្តាញ។ សូមព្យាយាមម្តងទៀត។', isError: true);
     }
   }
 
@@ -420,11 +427,11 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
-          title: const Text('Add Room Type'),
+          title: const Text('បន្ថែមប្រភេទបន្ទប់'),
           content: TextField(
             controller: typeController,
             decoration: const InputDecoration(
-              labelText: 'Room Type Name',
+              labelText: 'ឈ្មោះប្រភេទបន្ទប់',
               border: OutlineInputBorder(),
             ),
           ),
@@ -434,7 +441,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                 debugPrint('AddRoomScreen: Add Room Type dialog cancelled.');
                 Navigator.of(ctx).pop();
               },
-              child: const Text('Cancel'),
+              child: const Text('បោះបង់'),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -446,7 +453,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                 Navigator.of(ctx).pop();
                 await _addRoomType(name);
               },
-              child: const Text('Add'),
+              child: const Text('បន្ថែម'),
             ),
           ],
         );
@@ -461,7 +468,14 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
     );
     return Scaffold(
       appBar: AppBar(
-        title: Text(_editingRoomId == null ? 'Add New Room' : 'Edit Room'),
+        title: Text(
+          _editingRoomId == null ? 'បន្ថែមបន្ទប់ថ្មី' : 'កែសម្រួលបន្ទប់',
+          style: const TextStyle(
+            color: Colors.white, // Set app bar title color
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.cyan, // Consistent app bar color
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -471,11 +485,12 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
             children: [
               Text(
                 _editingRoomId == null
-                    ? 'Add New Room Details'
-                    : 'Edit Room Details',
+                    ? 'បន្ថែមព័ត៌មានលម្អិតបន្ទប់ថ្មី'
+                    : 'កែសម្រួលព័ត៌មានលម្អិតបន្ទប់',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: Colors.cyan, // Consistent color for titles
                 ),
               ),
               const SizedBox(height: 16),
@@ -484,34 +499,28 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    TextFormField(
+                    _buildTextFormField(
                       controller: nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Room Name',
-                        border: OutlineInputBorder(),
-                      ),
+                      labelText: 'ឈ្មោះបន្ទប់',
                       validator: (val) =>
-                          val!.trim().isEmpty ? 'Room name is required' : null,
+                          val!.trim().isEmpty ? 'ទាមទារឈ្មោះបន្ទប់' : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    _buildTextFormField(
                       controller: priceController,
+                      labelText: 'តម្លៃ',
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
-                        border: OutlineInputBorder(),
-                      ),
                       validator: (val) {
-                        if (val!.trim().isEmpty) return 'Price is required';
+                        if (val!.trim().isEmpty) return 'ទាមទារតម្លៃ';
                         if (double.tryParse(val) == null) {
-                          return 'Enter a valid number for price';
+                          return 'បញ្ចូលលេខត្រឹមត្រូវសម្រាប់តម្លៃ';
                         }
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Room Image',
+                      'រូបភាពបន្ទប់',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
@@ -524,18 +533,31 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
                               uploadedImageUrl!,
-                              height: 120,
+                              height: 150, // Increased image height
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => const Icon(
-                                Icons.broken_image,
-                                size: 100,
-                                color: Colors.grey,
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 150,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 80, // Larger icon
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ),
                             ),
                           )
                         : Container(
-                            height: 120,
+                            height: 150, // Increased height
                             width: double.infinity,
                             decoration: BoxDecoration(
                               color: Colors.grey[200],
@@ -544,17 +566,35 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                             ),
                             child: const Center(
                               child: Text(
-                                'No image selected',
+                                'មិនមានរូបភាពត្រូវបានជ្រើសរើសទេ',
                                 style: TextStyle(color: Colors.grey),
                               ),
                             ),
                           ),
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: TextButton.icon(
+                      child: ElevatedButton.icon(
+                        // Changed to ElevatedButton
                         onPressed: handlePickUploadImage,
-                        icon: const Icon(Icons.cloud_upload),
-                        label: const Text('Upload Image'),
+                        icon: const Icon(
+                          Icons.cloud_upload,
+                          color: Colors.white,
+                        ),
+                        label: const Text(
+                          'បង្ហោះរូបភាព',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Colors.blueAccent, // Distinct color for upload
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -566,7 +606,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                           child: DropdownButtonFormField<String>(
                             value: selectedRoomTypeId,
                             decoration: const InputDecoration(
-                              labelText: 'Room Type',
+                              labelText: 'ប្រភេទបន្ទប់',
                               border: OutlineInputBorder(),
                             ),
                             items: roomTypes.map((type) {
@@ -584,14 +624,17 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                               }
                             },
                             validator: (val) => val == null || val.isEmpty
-                                ? 'Room type is required'
+                                ? 'ទាមទារប្រភេទបន្ទប់'
                                 : null,
                           ),
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.add, color: Colors.blue),
-                          tooltip: 'Add Room Type',
+                          icon: const Icon(
+                            Icons.add,
+                            color: Colors.cyan,
+                          ), // Consistent color
+                          tooltip: 'បន្ថែមប្រភេទបន្ទប់',
                           onPressed: _showAddRoomTypeDialog,
                         ),
                       ],
@@ -601,7 +644,7 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                     DropdownButtonFormField<String>(
                       value: selectedLocation,
                       decoration: const InputDecoration(
-                        labelText: 'Location',
+                        labelText: 'ទីតាំង',
                         border: OutlineInputBorder(),
                       ),
                       items: locations.map((location) {
@@ -616,22 +659,17 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                           debugPrint('AddRoomScreen: Selected Location: $val');
                         }
                       },
-                      validator: (val) => val == null || val.isEmpty
-                          ? 'Location is required'
-                          : null,
+                      validator: (val) =>
+                          val == null || val.isEmpty ? 'ទាមទារទីតាំង' : null,
                     ),
                     const SizedBox(height: 16),
-                    TextFormField(
+                    _buildTextFormField(
                       controller: descriptionController,
+                      labelText: 'ការពិពណ៌នា',
                       maxLines: 3,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                        alignLabelWithHint: true,
-                        border: OutlineInputBorder(),
-                      ),
-                      validator: (val) => val!.trim().isEmpty
-                          ? 'Description is required'
-                          : null,
+                      alignLabelWithHint: true,
+                      validator: (val) =>
+                          val!.trim().isEmpty ? 'ទាមទារការពិពណ៌នា' : null,
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
@@ -640,13 +678,26 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                         onPressed: saveRoom,
                         icon: Icon(
                           _editingRoomId == null ? Icons.add_home : Icons.save,
+                          color: Colors.white, // Icon color
                         ),
                         label: Text(
-                          _editingRoomId == null ? 'Add Room' : 'Update Room',
-                          style: const TextStyle(fontSize: 16),
+                          _editingRoomId == null
+                              ? 'បន្ថែមបន្ទប់'
+                              : 'ធ្វើបច្ចុប្បន្នភាពបន្ទប់',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
                         ),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan, // Consistent color
                           padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              10,
+                            ), // Rounded corners
+                          ),
+                          elevation: 5, // Add elevation
                         ),
                       ),
                     ),
@@ -666,10 +717,26 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
                                 false,
                               ); // Pop without success
                             },
-                            icon: const Icon(Icons.cancel),
-                            label: const Text('Cancel Edit'),
+                            icon: const Icon(
+                              Icons.cancel,
+                              color: Colors.redAccent,
+                            ), // Icon color
+                            label: const Text(
+                              'បោះបង់ការកែសម្រួល',
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                              ), // Text color
+                            ),
                             style: OutlinedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(
+                                color: Colors.redAccent,
+                              ), // Border color
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  10,
+                                ), // Rounded corners
+                              ),
                             ),
                           ),
                         ),
@@ -681,6 +748,34 @@ class _AddRoomScreenState extends State<AddRoomScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // Helper method for consistent TextFormField styling
+  Widget _buildTextFormField({
+    required TextEditingController controller,
+    required String labelText,
+    TextInputType keyboardType = TextInputType.text,
+    int maxLines = 1,
+    bool alignLabelWithHint = false,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: labelText,
+        alignLabelWithHint: alignLabelWithHint,
+        border: const OutlineInputBorder(),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(
+            color: Theme.of(context).primaryColor,
+            width: 2,
+          ),
+        ),
+      ),
+      validator: validator,
     );
   }
 }

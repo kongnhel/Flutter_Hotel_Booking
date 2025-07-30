@@ -2,12 +2,17 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:hotel_booking/screens/root_app.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ Add this import
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CheckoutPage extends StatefulWidget {
   final Map<String, dynamic> roomData;
+  final String roomTypeName;
 
-  const CheckoutPage({super.key, required this.roomData});
+  const CheckoutPage({
+    super.key,
+    required this.roomData,
+    required this.roomTypeName,
+  });
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
@@ -27,23 +32,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
     text: '2',
   ); // Default to 2 guests
 
-  // ✅ Add a variable to store the current user's email
   String _currentUserEmail = '';
 
   @override
   void initState() {
     super.initState();
     _selectedPaymentMethod = _paymentMethods.first; // កំណត់វិធីទូទាត់ដំបូង
-    _loadUserEmail(); // ✅ Call to load user email when the page initializes
+    _loadUserEmail();
   }
 
-  // ✅ Function to load the user's email from SharedPreferences
   Future<void> _loadUserEmail() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _currentUserEmail =
-          prefs.getString('userId') ??
-          ''; // 'userId' is where we stored the email from LoginPage
+      _currentUserEmail = prefs.getString('email') ?? '';
     });
     if (_currentUserEmail.isEmpty) {
       _showSnackBar(
@@ -55,11 +56,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   void dispose() {
-    _guestsController.dispose(); // Dispose guests controller
+    _guestsController.dispose();
     super.dispose();
   }
 
-  // Function to pick a date
   Future<void> _selectDate(BuildContext context, bool isCheckIn) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -90,7 +90,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
       },
     );
     if (picked != null) {
-      // Simple null check for picked date
       setState(() {
         if (isCheckIn) {
           _checkInDate = picked;
@@ -107,7 +106,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  // Helper function for showing snack bars
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -118,37 +116,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   Future<void> _createOrder(BuildContext context) async {
-    // --- Basic Client-Side Validation ---
     if (_selectedPaymentMethod == null || _selectedPaymentMethod!.isEmpty) {
-      _showSnackBar(
-        "សូមជ្រើសរើសវិធីសាស្រ្តទូទាត់។",
-        isError: true,
-      ); // Please select a payment method.
+      _showSnackBar("សូមជ្រើសរើសវិធីសាស្រ្តទូទាត់។", isError: true);
       return;
     }
 
     if (_checkInDate.isAfter(_checkOutDate)) {
-      _showSnackBar(
-        "ថ្ងៃចេញត្រូវតែធំជាងថ្ងៃចូល។",
-        isError: true,
-      ); // Check-out date must be after check-in date.
+      _showSnackBar("ថ្ងៃចេញត្រូវតែធំជាងថ្ងៃចូល។", isError: true);
       return;
     }
 
-    // Parse guests
     final int? guests = int.tryParse(_guestsController.text);
     if (guests == null || guests <= 0) {
-      _showSnackBar(
-        "សូមបញ្ចូលចំនួនភ្ញៀវត្រឹមត្រូវ។",
-        isError: true,
-      ); // Please enter a valid number of guests.
+      _showSnackBar("សូមបញ្ចូលចំនួនភ្ញៀវត្រឹមត្រូវ។", isError: true);
       return;
     }
 
-    // ✅ Validate if user email is available
     if (_currentUserEmail.isEmpty) {
       _showSnackBar(
-        "មិនមានព័ត៌មាន Email របស់អ្នកប្រើប្រាស់ទេ។ សូមព្យាយាម Login ឡើងវិញ។",
+        "មិនមានព័ត៌មាន Email របស់អ្នកប្រើប្រាស់ទេ។ សូម Login ឡើងវិញ។",
         isError: true,
       );
       return;
@@ -157,12 +143,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => AlertDialog(
+      builder: (_) => const AlertDialog(
         content: Row(
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 20),
-            Text("កំពុងដំណើរការទូទាត់..."), // Processing Payment...
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text("កំពុងដំណើរការទូទាត់..."),
           ],
         ),
       ),
@@ -182,40 +168,39 @@ class _CheckoutPageState extends State<CheckoutPage> {
           "totalPrice": _getPriceAsDouble(),
           "paymentMethod": _selectedPaymentMethod,
           "status": "pending",
-          // ✅ Use the dynamically loaded user email here
           "userId": _currentUserEmail,
         }),
       );
 
       if (!mounted) return;
-
       Navigator.of(context, rootNavigator: true).pop();
 
       if (response.statusCode == 201) {
-        _showSnackBar(
-          "ការទូទាត់បានជោគជ័យ! ការបញ្ជាទិញត្រូវបានបង្កើត។",
-          isError: false,
-        );
-
+        _showSnackBar("ការទូទាត់បានជោគជ័យ! ការបញ្ជាទិញត្រូវបានបង្កើត។");
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const RootApp()),
           (route) => false,
         );
       } else {
-        print(
-          "API Error Response: ${response.statusCode} - ${response.body}",
-        ); // Log the full response
-        _showSnackBar("បរាជ័យ: ${response.body}", isError: true);
+        String errorMessage;
+        try {
+          final errorData = jsonDecode(response.body);
+          errorMessage = errorData["error"] ?? "មានបញ្ហាដែលមិនស្គាល់!";
+        } catch (_) {
+          errorMessage = response.body;
+        }
+
+        print("API Error Response: ${response.statusCode} - $errorMessage");
+        _showSnackBar("បរាជ័យ: $errorMessage", isError: true);
       }
     } catch (e) {
       Navigator.of(context, rootNavigator: true).pop();
-      print("Network Error: $e"); // Log network errors
+      print("Network Error: $e");
       _showSnackBar("មានបញ្ហា: $e", isError: true);
     }
   }
 
-  // Helper to safely convert price to double for formatting
   double _getPriceAsDouble() {
     final price = widget.roomData['price'];
     if (price is num) {
@@ -304,7 +289,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           const Divider(height: 25, thickness: 1),
           _summaryRow("បន្ទប់:", widget.roomData['name'] ?? 'N/A'), // Room:
-          _summaryRow("ប្រភេទ:", widget.roomData['type'] ?? 'N/A'), // Type:
+          _summaryRow("ប្រភេទ:", widget.roomTypeName), // Type:
           _summaryRow(
             "តម្លៃ:",
             "${_getPriceAsDouble().toStringAsFixed(2)}\$",
