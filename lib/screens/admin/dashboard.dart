@@ -61,14 +61,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       builder: (context) => const UserManagement(),
                     ),
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'មុខងារគ្រប់គ្រងអ្នកប្រើប្រាស់នឹងមកដល់ឆាប់ៗនេះ!',
-                      ), // User Management functionality coming soon!
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
                 },
               ),
               _buildDashboardCard(
@@ -80,14 +72,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const OrdersScreen(),
-                    ),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'មុខងារគ្រប់គ្រងការកក់នឹងមកដល់ឆាប់ៗនេះ!',
-                      ), // Booking Management functionality coming soon!
-                      duration: Duration(seconds: 2),
                     ),
                   );
                 },

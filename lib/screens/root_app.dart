@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_admin_scaffold/admin_scaffold.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:hotel_booking/models/user_model.dart';
-import 'package:hotel_booking/screens/dashboard.dart';
-import 'package:hotel_booking/screens/sidebar_screen/admin_order_screen.dart';
+import 'package:hotel_booking/screens/admin/dashboard.dart';
+import 'package:hotel_booking/screens/admin/admin_order_screen.dart';
 
 import 'package:hotel_booking/screens/sidebar_screen/room/add_room.dart';
 import 'package:hotel_booking/screens/sidebar_screen/room/room_list.dart';

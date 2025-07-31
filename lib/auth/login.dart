@@ -2,13 +2,13 @@ import 'dart:convert'; // For JSON encoding/decoding
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart'; // Core Flutter widgets
 import 'package:hotel_booking/models/user_model.dart'; // User model definition
-import 'package:hotel_booking/screens/dashboard.dart';
-import 'package:hotel_booking/screens/root_app.dart'; // The main admin dashboard
+import 'package:hotel_booking/screens/admin/dashboard.dart'; // Assuming this is AdminDashboardPage
+import 'package:hotel_booking/screens/root_app.dart'; // The main app shell with sidebar
 import 'package:hotel_booking/theme/color.dart'; // Your app's custom color theme
 import 'package:http/http.dart' as http; // For making HTTP requests
 import 'package:hotel_booking/auth/register.dart'; // For navigating to the registration page
 import 'package:shared_preferences/shared_preferences.dart'; // For local data storage (e.g., user session)
-import 'package:hotel_booking/screens/home.dart'; // Import HomePage
+import 'package:hotel_booking/screens/home.dart'; // Import HomePage (though RootApp will handle its display)
 
 /// A stateful widget for the user login page.
 /// This page allows users to enter their credentials and log in.
@@ -93,21 +93,13 @@ class _LoginPageState extends State<LoginPage> {
         }
 
         if (mounted) {
-          // Navigate based on user role
-          if (userModel.role == 'admin') {
-            // Assuming 'admin' is the role for administrators
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
-            );
-          } else {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const HomePage(),
-              ), // Navigate to HomePage for regular users
-            );
-          }
+          // ALWAYS navigate to RootApp after successful login.
+          // RootApp will then decide which initial screen (HomePage or AdminDashboardPage) to show
+          // based on the user's role, and it will provide the sidebar.
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const RootApp()),
+          );
         }
       } else {
         final responseBody = json.decode(response.body);
